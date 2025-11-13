@@ -209,8 +209,16 @@
             localStorage.setItem('quizLeaderboard', JSON.stringify(leaderboard));
             return result; // Return the result object for Supabase upload
         }
+        
+        // FIX: Utility function to generate a simple, non-standard UUID-like string for placeholders
+        function generatePlaceholderUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
 
-        // ⚠️ 3. DATABASE UPLOAD FUNCTION ADDED HERE
+        // ⚠️ 3. DATABASE UPLOAD FUNCTION FIXED HERE
         // NEW ASYNC FUNCTION: Upload result to Supabase
         async function uploadResultToSupabase(resultData) {
             // Check for placeholder credentials to give the user a clear error message
@@ -220,18 +228,25 @@
                 return;
             }
             
-            // Structure data for the Supabase table
+            // FIX: Only include columns that exist in your provided Supabase schema
             const dataToInsert = {
-                student_name: resultData.name,
-                college_email: resultData.email,
-                admission_no: resultData.admissionNo,
+                // FIX: These two fields are REQUIRED by your schema (NOT NULL) but not provided by your JS.
+                // We inject placeholders to satisfy the NOT NULL constraint, but this data will be inaccurate.
+                student_id: generatePlaceholderUUID(), 
+                quiz_id: generatePlaceholderUUID(), 
+
                 score: resultData.score,
-                total_questions: resultData.total,
-                percentage: parseFloat(resultData.percentage),
+                percentage: resultData.percentage, // Schema expects TEXT, using the string value
                 total_violations: resultData.violations,
                 window_switch_violations: resultData.windowSwitchViolations,
                 copy_paste_violations: resultData.copyPasteViolations,
                 submission_time: new Date().toISOString()
+                
+                // NOTE: The following original fields were removed because they do NOT exist in your Supabase schema:
+                // student_name: resultData.name,
+                // college_email: resultData.email,
+                // admission_no: resultData.admissionNo,
+                // total_questions: resultData.total,
             };
 
             console.log("Attempting to insert:", dataToInsert);
