@@ -6,7 +6,7 @@
     <title>Proctored Business & Finance Quiz</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
     <style>
         /* Custom styles to ensure full-screen on modern browsers */
         #app {
@@ -75,17 +75,17 @@
     </div>
     
     <script>
+        // ⚠️ 2. SUPABASE CONFIGURATION & CLIENT INITIALIZATION ADDED HERE
         // --- SUPABASE CONFIGURATION ---
-        // !!! IMPORTANT: REPLACE THESE PLACEHOLDERS WITH YOUR ACTUAL SUPABASE PROJECT DETAILS !!!
         const SUPABASE_URL = 'https://tdxausibwaagbhnbgkgz.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkeGF1c2lid2FhZ2JobmJna2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNDgyMDYsImV4cCI6MjA3ODYyNDIwNn0.ApeJFTg-pQaV2gigOUTGpKnMY_AFnT1v5DPpYCCmOKY';
-        const SUPABASE_TABLE_NAME = 'quiz_submissions'; 
+        const SUPABASE_TABLE_NAME = 'quiz_results'; 
 
         // Initialize Supabase client
         const { createClient } = supabase;
         const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         // ------------------------------
-
+        
         // --- QUIZ DATA ---
         const quizQuestions = [
             { question: "Who is the CEO of Apple Inc.?", options: ["Steve Jobs", "Tim Cook", "Mark Zuckerberg", "Elon Musk"], answer: "Tim Cook" },
@@ -210,9 +210,11 @@
             return result; // Return the result object for Supabase upload
         }
 
+        // ⚠️ 3. DATABASE UPLOAD FUNCTION ADDED HERE
         // NEW ASYNC FUNCTION: Upload result to Supabase
         async function uploadResultToSupabase(resultData) {
-            if (SUPABASE_URL === 'https://tdxausibwaagbhnbgkgz.supabase.co') {
+            // Check for placeholder credentials to give the user a clear error message
+            if (SUPABASE_URL.includes('YOUR_SUPABASE_URL_HERE')) {
                 console.error("Supabase credentials not configured. Skipping upload.");
                 showTempMessage('Submission saved locally, but database credentials are not set.');
                 return;
@@ -240,17 +242,20 @@
                     .insert([dataToInsert]);
 
                 if (error) {
+                    // This error indicates a problem with the table structure or RLS
                     console.error('Error inserting data into Supabase:', error.message);
-                    showTempMessage('Database error: Failed to save results. Check console.');
+                    showTempMessage('Database error: Failed to save results. Check console for RLS/table issues.');
                 } else {
                     console.log('Successfully saved results to Supabase.');
                     showTempMessage('Quiz submitted and result saved to database.');
                 }
             } catch (e) {
+                // This error indicates a network or initialization problem
                 console.error('Supabase connection error:', e);
                 showTempMessage('Connection error: Could not reach database.');
             }
         }
+        // ----------------------------------------
 
         // Toggle Quiz Status (Admin Feature)
         function toggleQuizState() {
@@ -274,7 +279,7 @@
         }
 
 
-        // --- PROCTORING LOGIC (Unchanged) ---
+        // --- PROCTORING LOGIC ---
 
         // Request Full Screen
         function requestFullScreen() {
@@ -408,7 +413,7 @@
             document.removeEventListener('paste', copyCutPasteHandler);
         }
 
-        // --- QUIZ TIMER & NAVIGATION LOGIC (Unchanged) ---
+        // --- QUIZ TIMER & NAVIGATION LOGIC ---
 
         function updateTimerDisplay() {
             const progressBar = document.getElementById('progressBar');
@@ -621,7 +626,7 @@
             `;
         }
 
-        // --- ADMIN / LEADERBOARD (Includes Toggle Button) ---
+        // --- ADMIN / LEADERBOARD ---
 
         function renderAdminLogin() {
             APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
@@ -656,6 +661,7 @@
                 if (id === 'admin' && password === 'admin123') { 
                     setView('leaderboard');
                 } else {
+                    // Use custom modal or simple visual feedback for login errors, avoiding alert
                     const loginMessage = document.createElement('p');
                     loginMessage.className = 'text-sm text-red-500 mt-2 text-center';
                     loginMessage.textContent = 'Invalid Admin ID or Password.';
@@ -669,6 +675,7 @@
             const leaderboard = getLeaderboard();
             APP_CONTAINER.className = "flex items-start justify-center min-h-screen p-4 bg-gray-100";
             
+            // Generate table rows only if there are entries in the leaderboard
             const tableRows = leaderboard.map((entry, index) => `
                 <tr class="hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}</td>
@@ -681,7 +688,9 @@
                 </tr>
             `).join('');
             
+            // Check if tableRows is blank and show a message if it is.
             const tableContent = tableRows.length > 0 ? tableRows : `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500 font-medium bg-white">No results recorded yet.</td></tr>`;
+
 
             APP_CONTAINER.innerHTML = `
                 <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl p-8 mt-10">
@@ -721,7 +730,7 @@
         }
 
 
-        // --- INITIALIZATION (Unchanged) ---
+        // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
             setView('signin');
             
@@ -730,10 +739,13 @@
                 setView('admin'); // Always go to admin login screen
             });
 
-            // Full-screen change handler function 
+            // Full-screen change handler function (Robust full screen exit handler)
             const fullScreenChangeHandler = () => {
+                // Check if we are currently NOT in full screen AND the quiz is active
+                // Also check if the modal is currently hidden. If the modal is visible, it means the violation was already handled.
                 if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && currentQuestionIndex < quizQuestions.length && VIOLATION_MODAL.style.display !== 'flex') {
-                    handleProctoringViolation('windowSwitch'); 
+                    // This means the user exited full screen manually
+                    handleProctoringViolation('windowSwitch'); // Call with specific type
                 }
             };
 
