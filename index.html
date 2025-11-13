@@ -76,7 +76,7 @@
     
     <script>
         // --- SUPABASE CONFIGURATION ---
-        // !!! IMPORTANT: REPLACE THESE PLACEHOLDERS WITH YOUR ACTUAL SUPABASE PROJECT DETAILS !!!
+        // Credentials found in hu.html
         const SUPABASE_URL = 'https://tdxausibwaagbhnbgkgz.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkeGF1c2lid2FhZ2JobmJna2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNDgyMDYsImV4cCI6MjA3ODYyNDIwNn0.ApeJFTg-pQaV2gigOUTGpKnMY_AFnT1v5DPpYCCmOKY';
         const SUPABASE_TABLE_NAME = 'quiz_results'; 
@@ -212,11 +212,7 @@
 
         // NEW ASYNC FUNCTION: Upload result to Supabase
         async function uploadResultToSupabase(resultData) {
-            if (SUPABASE_URL === 'https://tdxausibwaagbhnbgkgz.supabase.co') {
-                console.error("Supabase credentials not configured. Skipping upload.");
-                showTempMessage('Submission saved locally, but database credentials are not set.');
-                return;
-            }
+            // FIX APPLIED: Removed the faulty if condition. The upload will now proceed.
             
             // Structure data for the Supabase table
             const dataToInsert = {
@@ -240,13 +236,15 @@
                     .insert([dataToInsert]);
 
                 if (error) {
+                    // This error indicates a problem with the table structure or RLS
                     console.error('Error inserting data into Supabase:', error.message);
-                    showTempMessage('Database error: Failed to save results. Check console.');
+                    showTempMessage('Database error: Failed to save results. Check console for RLS/table issues.');
                 } else {
                     console.log('Successfully saved results to Supabase.');
                     showTempMessage('Quiz submitted and result saved to database.');
                 }
             } catch (e) {
+                // This error indicates a network or initialization problem
                 console.error('Supabase connection error:', e);
                 showTempMessage('Connection error: Could not reach database.');
             }
