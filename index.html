@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,15 +9,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* Custom styles to ensure full-screen on modern browsers */
         #app {
             min-height: 100vh;
         }
+        /* Style for the leader board button, always visible */
         #adminButton {
             position: fixed;
             top: 10px;
             right: 10px;
             z-index: 100;
         }
+        /* Custom progress bar styles */
         #progressBarContainer {
             position: relative;
             height: 8px;
@@ -27,14 +31,14 @@
         }
         #progressBar {
             height: 100%;
-            width: 100%;
-            background-color: #ef4444;
-            transition: none;
+            width: 100%; /* Start full */
+            background-color: #ef4444; /* Red color for timer */
+            transition: none; /* Removed transition for smooth timer animation */
         }
         #countdownTimer {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #ef4444;
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 700; /* font-bold */
+            color: #ef4444; /* Red color */
             text-align: right;
             margin-bottom: 10px;
         }
@@ -73,6 +77,7 @@
     
     <script>
         // --- SUPABASE CONFIGURATION ---
+        // !!! IMPORTANT: REPLACE THESE PLACEHOLDERS WITH YOUR ACTUAL SUPABASE PROJECT DETAILS !!!
         const SUPABASE_URL = 'https://tdxausibwaagbhnbgkgz.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkeGF1c2lid2FhZ2JobmJna2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNDgyMDYsImV4cCI6MjA3ODYyNDIwNn0.ApeJFTg-pQaV2gigOUTGpKnMY_AFnT1v5DPpYCCmOKY';
         const SUPABASE_TABLE_NAME = 'quiz_submissions'; 
@@ -91,19 +96,19 @@
             { question: "What does KPI stand for?", options: ["Key Performance Indicator", "Knowledge Processing Index", "Key Product Inventory", "Known Profit Index"], answer: "Key Performance Indicator" },
             { question: "What is a blue-chip company?", options: ["Large, established, financially sound firm", "New startup", "Government enterprise", "Small-cap company"], answer: "Large, established, financially sound firm" },
             { question: "The 2025 Union Budget of India was presented on", options: ["1 January 2025", "1 February 2025", "1 March 2025", "1 April 2025"], answer: "1 March 2025" },
-            { question: "The term "start-up unicorn" refers to a private company valued at:", options: ["Over US $100 million", "Over US $1 billion", "Over US $500 million", "Over US $10 billion"], answer: "Over US $1 billion" },
-            { question: "The program "PLI scheme" in India is related to:", options: ["Private Lending Initiative", "Production Linked Incentive", "Public Listing Initiative", "Pension Linked Interest"], answer: "Production Linked Incentive" },
+            { question: "The term “start-up unicorn” refers to a private company valued at:", options: ["Over US $100 million", "Over US $1 billion", "Over US $500 million", "Over US $10 billion"], answer: "Over US $1 billion" },
+            { question: "The program “PLI scheme” in India is related to:", options: ["Private Lending Initiative", "Production Linked Incentive", "Public Listing Initiative", "Pension Linked Interest"], answer: "Production Linked Incentive" },
             { question: "The parent company of Tanishq is:", options: ["Titan", "Reliance", "Aditya Birla Group", "Dabur"], answer: "Titan" },
-            { question: ""Think Different" is associated with:", options: ["Apple", "Microsoft", "Samsung", "Dell"], answer: "Apple" },
+            { question: "“Think Different” is associated with:", options: ["Apple", "Microsoft", "Samsung", "Dell"], answer: "Apple" },
             { question: "SEBI regulates:", options: ["Stock Market in India", "Banking Sector", "Insurance Companies", "E-commerce"], answer: "Stock Market in India" },
-            { question: ""The Big Four" accounting firms include all except:", options: ["Deloitte", "PwC", "EY", "KPMG India Limited"], answer: "KPMG India Limited" },
+            { question: "“The Big Four” accounting firms include all except:", options: ["Deloitte", "PwC", "EY", "KPMG India Limited"], answer: "KPMG India Limited" },
             { question: "Which is the largest public sector bank in India?", options: ["State Bank of India", "Punjab National Bank", "Bank of Baroda", "Canara Bank"], answer: "State Bank of India" },
             { question: "Who is the current Governor of RBI (2025)?", options: ["Shaktikanta Das", "Urjit Patel", "Raghuram Rajan", "D. Subbarao"], answer: "Shaktikanta Das" },
-            { question: "SBI's tagline is:", options: [""The Banker to Every Indian"", ""We Understand Your World"", ""Trusted Family Bank"", ""Your Perfect Partner""], answer: ""The Banker to Every Indian"" },
+            { question: "SBI’s tagline is:", options: ["“The Banker to Every Indian”", "“We Understand Your World”", "“Trusted Family Bank”", "“Your Perfect Partner”"], answer: "“The Banker to Every Indian”" },
             { question: "The first Indian bank to open a branch outside India was:", options: ["Bank of India", "SBI", "PNB", "Canara Bank"], answer: "Bank of India" },
-            { question: "Which startup is known as "India's leading edtech company"?", options: ["BYJU'S", "Unacademy", "Vedantu", "Simplilearn"], answer: "BYJU'S" },
-            { question: "Which company became India's first to cross $250 billion market cap?", options: ["Reliance Industries", "Tata Consultancy Services", "Infosys", "HDFC Bank"], answer: "Reliance Industries" },
-            { question: "Which Indian bank ranked highest in "World's Best Banks 2024" by Forbes?", options: ["HDFC Bank", "SBI", "Axis Bank", "ICICI"], answer: "HDFC Bank" }
+            { question: "Which startup is known as “India’s leading edtech company”?", options: ["BYJU’S", "Unacademy", "Vedantu", "Simplilearn"], answer: "BYJU’S" },
+            { question: "Which company became India’s first to cross $250 billion market cap?", options: ["Reliance Industries", "Tata Consultancy Services", "Infosys", "HDFC Bank"], answer: "Reliance Industries" },
+            { question: "Which Indian bank ranked highest in “World’s Best Banks 2024” by Forbes?", options: ["HDFC Bank", "SBI", "Axis Bank", "ICICI"], answer: "HDFC Bank" }
         ];
 
         // --- STATE MANAGEMENT ---
@@ -111,20 +116,24 @@
         let currentQuestionIndex = 0;
         let studentResponses = Array(quizQuestions.length).fill(null);
         let timerInterval;
+        // Time per question is 10 seconds
         const TIME_PER_QUESTION = 10; 
         let timeLeft = TIME_PER_QUESTION;
         
+        // Check localStorage for quiz status, default to true
         let isQuizActive = localStorage.getItem('isQuizActive') === 'false' ? false : true; 
         
+        // Updated violation structure for granular tracking
         let proctoringViolations = {
             total: 0,
             windowSwitch: 0,
             copyPaste: 0
         };
-        const MAX_VIOLATIONS = 3;
+        const MAX_VIOLATIONS = 3; // Max total violations before ending exam
         
+        // Debounce mechanism to prevent multiple window-switch counts
         let violationCooldown = false; 
-        const COOLDOWN_DURATION = 2000;
+        const COOLDOWN_DURATION = 2000; // 2 seconds cooldown
 
         const APP_CONTAINER = document.getElementById('app');
         const ADMIN_BUTTON = document.getElementById('adminButton');
@@ -136,10 +145,13 @@
 
         // --- HELPER FUNCTIONS ---
 
+        // Manages view switching
         function setView(viewName) {
+            // Hide all custom modals when switching views
             VIOLATION_MODAL.style.display = 'none';
             QUIZ_OFF_MODAL.style.display = 'none'; 
             
+            // Ensure the sign-in form is visible before rendering it
             const signInForm = document.getElementById('signInForm');
             if(signInForm) signInForm.style.display = 'block'; 
 
@@ -152,20 +164,21 @@
             else if (viewName === 'leaderboard') renderLeaderboard();
         }
 
-        function showTempMessage(msg, isSuccess = false) {
+        // Utility to show a temporary message (since we can't use alert)
+        function showTempMessage(msg) {
             let tempDiv = document.getElementById('tempMessage');
             if (!tempDiv) {
                 tempDiv = document.createElement('div');
                 tempDiv.id = 'tempMessage';
-                tempDiv.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-xl z-[60] opacity-0 transition-opacity duration-300';
+                tempDiv.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow-xl z-[60] opacity-0 transition-opacity duration-300';
                 document.body.appendChild(tempDiv);
             }
-            tempDiv.className = `fixed top-20 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-xl z-[60] opacity-0 transition-opacity duration-300 ${isSuccess ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`;
             tempDiv.textContent = msg;
             tempDiv.style.opacity = '1';
             setTimeout(() => { tempDiv.style.opacity = '0'; }, 3000);
         }
 
+        // Retrieves leaderboard data from Local Storage
         function getLeaderboard() {
             try {
                 const data = localStorage.getItem('quizLeaderboard');
@@ -176,6 +189,7 @@
             }
         }
 
+        // Saves current student's score to Local Storage (returns the result object for Supabase)
         function saveResult(name, email, admissionNo, score, totalQuestions, violations) {
             const leaderboard = getLeaderboard();
             const result = {
@@ -191,13 +205,20 @@
                 timestamp: new Date().toLocaleString()
             };
             leaderboard.push(result);
+            // Sort by score (descending) then by time (ascending) to break ties
             leaderboard.sort((a, b) => b.score - a.score || new Date(a.timestamp) - new Date(b.timestamp));
             localStorage.setItem('quizLeaderboard', JSON.stringify(leaderboard));
-            return result;
+            return result; // Return the result object for Supabase upload
         }
 
-        // FIXED: Upload result to Supabase
+        // NEW ASYNC FUNCTION: Upload result to Supabase
         async function uploadResultToSupabase(resultData) {
+            if (SUPABASE_URL === 'https://tdxausibwaagbhnbgkgz.supabase.co') {
+                console.error("Supabase credentials not configured. Skipping upload.");
+                showTempMessage('Submission saved locally, but database credentials are not set.');
+                return;
+            }
+            
             // Structure data for the Supabase table
             const dataToInsert = {
                 student_name: resultData.name,
@@ -212,47 +233,51 @@
                 submission_time: new Date().toISOString()
             };
 
-            console.log("Attempting to insert data into Supabase:", dataToInsert);
+            console.log("Attempting to insert:", dataToInsert);
 
             try {
-                const { data, error } = await client
+                const { error } = await client
                     .from(SUPABASE_TABLE_NAME)
-                    .insert([dataToInsert])
-                    .select();
+                    .insert([dataToInsert]);
 
                 if (error) {
-                    console.error('Error inserting data into Supabase:', error);
-                    showTempMessage(`Database error: ${error.message}`, false);
+                    console.error('Error inserting data into Supabase:', error.message);
+                    showTempMessage('Database error: Failed to save results. Check console.');
                 } else {
-                    console.log('Successfully saved results to Supabase:', data);
-                    showTempMessage('Quiz submitted and saved to database successfully!', true);
+                    console.log('Successfully saved results to Supabase.');
+                    showTempMessage('Quiz submitted and result saved to database.');
                 }
             } catch (e) {
                 console.error('Supabase connection error:', e);
-                showTempMessage('Connection error: Could not reach database.', false);
+                showTempMessage('Connection error: Could not reach database.');
             }
         }
 
+        // Toggle Quiz Status (Admin Feature)
         function toggleQuizState() {
             isQuizActive = !isQuizActive;
             localStorage.setItem('isQuizActive', isQuizActive);
             renderLeaderboard();
         }
         
+        // Show Quiz Off Modal
         function showQuizOffModal() {
             const signInForm = document.getElementById('signInForm');
             if (signInForm) signInForm.style.display = 'none'; 
             
             QUIZ_OFF_MODAL.style.display = 'flex';
             
+            // Set up button to dismiss modal and re-show the sign-in form
             QUIZ_OFF_CONFIRM_BTN.onclick = () => {
                 QUIZ_OFF_MODAL.style.display = 'none';
-                if(signInForm) setView('signin');
+                if(signInForm) setView('signin'); // Reload signin view to refresh state
             };
         }
 
-        // --- PROCTORING LOGIC ---
 
+        // --- PROCTORING LOGIC (Unchanged) ---
+
+        // Request Full Screen
         function requestFullScreen() {
             const element = document.documentElement;
             if (element.requestFullscreen) {
@@ -266,6 +291,7 @@
             }
         }
 
+        // Exit Full Screen
         function exitFullScreen() {
             if (document.exitFullscreen) {
                 document.exitFullscreen();
@@ -278,6 +304,7 @@
             }
         }
         
+        // Show custom modal instead of alert
         function showViolationModal(isTerminating) {
             if (isTerminating) {
                 VIOLATION_MESSAGE.innerHTML = `
@@ -307,6 +334,7 @@
             VIOLATION_MODAL.style.display = 'flex';
         }
 
+        // Proctoring violation handler
         function handleProctoringViolation(type) {
             if (currentQuestionIndex >= quizQuestions.length) {
                 return; 
@@ -341,6 +369,8 @@
                 showViolationModal(false); 
             }
         }
+        
+        // Named functions for event listeners to allow proper removal
 
         const visibilityChangeHandler = () => {
             if (document.hidden) {
@@ -361,6 +391,7 @@
             handleProctoringViolation('copyPaste');
         };
 
+        // Attach event listeners for proctoring
         function enableProctoring() {
             document.addEventListener('visibilitychange', visibilityChangeHandler);
             window.addEventListener('blur', blurHandler);
@@ -369,6 +400,7 @@
             document.addEventListener('paste', copyCutPasteHandler);
         }
 
+        // Detach event listeners
         function disableProctoring() {
             document.removeEventListener('visibilitychange', visibilityChangeHandler);
             window.removeEventListener('blur', blurHandler);
@@ -377,7 +409,7 @@
             document.removeEventListener('paste', copyCutPasteHandler);
         }
 
-        // --- QUIZ TIMER & NAVIGATION LOGIC ---
+        // --- QUIZ TIMER & NAVIGATION LOGIC (Unchanged) ---
 
         function updateTimerDisplay() {
             const progressBar = document.getElementById('progressBar');
@@ -457,6 +489,7 @@
             document.getElementById('signInForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
+                // FEATURE CHECK: Block access if quiz is not active
                 if (!isQuizActive) {
                     showQuizOffModal();
                     return; 
@@ -518,6 +551,198 @@
 
             document.getElementById('nextButton').addEventListener('click', () => {
                 const selected = document.querySelector('input[name="answer"]:checked');
+                // Record the response 
                 studentResponses[currentQuestionIndex] = selected ? selected.value : null;
                 stopTimer();
                 moveToNextQuestion();
+            });
+
+            // Listen for option selection to record early answer
+            document.getElementById('optionsContainer').addEventListener('change', (e) => {
+                if (e.target.name === 'answer') {
+                    studentResponses[currentQuestionIndex] = e.target.value;
+                }
+            });
+        }
+
+        function calculateAndShowResults(wasTerminated) {
+            let score = 0;
+            quizQuestions.forEach((q, index) => {
+                if (studentResponses[index] === q.answer) {
+                    score++;
+                }
+            });
+
+            // 1. Save results locally (for Admin Leaderboard view)
+            const result = saveResult(
+                studentInfo.name, 
+                studentInfo.email, 
+                studentInfo.admissionNo, 
+                score, 
+                quizQuestions.length, 
+                proctoringViolations
+            );
+
+            // 2. Upload results to Supabase (asynchronously)
+            uploadResultToSupabase(result);
+            
+            APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
+            APP_CONTAINER.innerHTML = `
+                <div class="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-10 text-center transform transition duration-500">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
+                        <i class="fas fa-check-circle text-3xl text-green-600"></i>
+                    </div>
+                    <h2 class="text-3xl font-extrabold text-gray-900 mb-3">${wasTerminated ? 'Exam Terminated & Submitted' : 'Quiz Submitted Successfully!'}</h2>
+                    <p class="text-gray-600 mb-8">${wasTerminated ? `Due to ${proctoringViolations.total} violations, the exam ended forcefully.` : 'Your responses have been recorded.'}</p>
+                    
+                    <div class="bg-blue-50 p-6 rounded-xl mb-8">
+                        <h3 class="text-xl font-bold text-blue-800 mb-3">Your Result</h3>
+                        <div class="flex justify-between items-center text-lg text-gray-800 border-b pb-2 mb-2">
+                            <span>Score:</span>
+                            <span class="font-bold text-green-700">${score} / ${quizQuestions.length}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-lg text-gray-800">
+                            <span>Proctoring Violations (Total):</span>
+                            <span class="font-bold text-red-700">${proctoringViolations.total}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-md text-gray-700 mt-2 pt-2 border-t border-gray-200">
+                            <span>- Tab/Window Switch:</span>
+                            <span class="font-semibold text-red-600">${proctoringViolations.windowSwitch}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-md text-gray-700">
+                            <span>- Copy/Paste Attempt:</span>
+                            <span class="font-semibold text-red-600">${proctoringViolations.copyPaste}</span>
+                        </div>
+                    </div>
+
+                    <button onclick="setView('signin')" class="w-full py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+                        Return to Sign-In
+                    </button>
+                </div>
+            `;
+        }
+
+        // --- ADMIN / LEADERBOARD (Includes Toggle Button) ---
+
+        function renderAdminLogin() {
+            APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
+            APP_CONTAINER.innerHTML = `
+                <div class="w-full max-w-sm bg-white rounded-xl shadow-xl p-8">
+                    <h2 class="text-2xl font-bold text-center text-gray-900 mb-6"><i class="fas fa-user-shield mr-2 text-red-600"></i>Admin Login</h2>
+                    <p class="text-center text-gray-500 text-sm mb-4"></p>
+                    <form id="adminLoginForm" class="space-y-4">
+                        <div>
+                            <label for="adminId" class="block text-sm font-medium text-gray-700">Admin ID</label>
+                            <input type="text" id="adminId" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
+                        </div>
+                        <div>
+                            <label for="adminPassword" class="block text-sm font-medium text-gray-700">Password</label>
+                            <input type="password" id="adminPassword" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
+                        </div>
+                        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out mt-6">
+                            Login
+                        </button>
+                        <button type="button" onclick="setView('signin')" class="w-full mt-2 py-2 px-4 rounded-lg text-sm font-medium text-gray-600 border border-gray-300 hover:bg-gray-100 transition duration-150 ease-in-out">
+                            Back to Home
+                        </button>
+                    </form>
+                </div>
+            `;
+
+            document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const id = document.getElementById('adminId').value;
+                const password = document.getElementById('adminPassword').value;
+
+                if (id === 'admin' && password === 'admin123') { 
+                    setView('leaderboard');
+                } else {
+                    const loginMessage = document.createElement('p');
+                    loginMessage.className = 'text-sm text-red-500 mt-2 text-center';
+                    loginMessage.textContent = 'Invalid Admin ID or Password.';
+                    document.getElementById('adminLoginForm').appendChild(loginMessage);
+                    setTimeout(() => loginMessage.remove(), 3000);
+                }
+            });
+        }
+
+        function renderLeaderboard() {
+            const leaderboard = getLeaderboard();
+            APP_CONTAINER.className = "flex items-start justify-center min-h-screen p-4 bg-gray-100";
+            
+            const tableRows = leaderboard.map((entry, index) => `
+                <tr class="hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.admissionNo}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-700">${entry.score}/${entry.total}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${entry.percentage >= 80 ? 'text-green-600' : entry.percentage >= 50 ? 'text-yellow-600' : 'text-red-600'}">${entry.percentage}%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-500">${entry.violations} (W:${entry.windowSwitchViolations || 0}, C:${entry.copyPasteViolations || 0})</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.timestamp}</td>
+                </tr>
+            `).join('');
+            
+            const tableContent = tableRows.length > 0 ? tableRows : `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500 font-medium bg-white">No results recorded yet.</td></tr>`;
+
+            APP_CONTAINER.innerHTML = `
+                <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl p-8 mt-10">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-900"><i class="fas fa-trophy mr-2 text-yellow-500"></i>Real-Time Leaderboard</h2>
+                        <div class="flex items-center space-x-4">
+                            <button id="quizToggleButton" class="px-4 py-2 rounded-lg text-sm font-medium text-white ${isQuizActive ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} transition duration-150">
+                                <i class="fas ${isQuizActive ? 'fa-toggle-on' : 'fa-toggle-off'} mr-2"></i>Quiz Status: ${isQuizActive ? 'ON' : 'OFF'}
+                            </button>
+                            <button onclick="setView('signin')" class="px-4 py-2 rounded-lg text-sm font-medium text-blue-600 border border-blue-600 hover:bg-blue-50 transition duration-150">
+                                Return Home
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto shadow border-b border-gray-200 sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admission No.</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Violations (W/C)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                ${tableContent}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            document.getElementById('quizToggleButton').addEventListener('click', toggleQuizState);
+        }
+
+
+        // --- INITIALIZATION (Unchanged) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            setView('signin');
+            
+            // Handle Admin Button Click
+            ADMIN_BUTTON.addEventListener('click', () => {
+                setView('admin'); // Always go to admin login screen
+            });
+
+            // Full-screen change handler function 
+            const fullScreenChangeHandler = () => {
+                if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && currentQuestionIndex < quizQuestions.length && VIOLATION_MODAL.style.display !== 'flex') {
+                    handleProctoringViolation('windowSwitch'); 
+                }
+            };
+
+            // Attach full-screen handlers
+            document.addEventListener('fullscreenchange', fullScreenChangeHandler);
+            document.addEventListener('webkitfullscreenchange', fullScreenChangeHandler);
+            document.addEventListener('mozfullscreenchange', fullScreenChangeHandler);
+        });
+    </script>
+</body>
+</html>
