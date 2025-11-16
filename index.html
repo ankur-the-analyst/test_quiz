@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,11 +45,14 @@
     </style>
 </head>
 <body class="bg-gray-50">
+
     <button id="adminButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-lg transition duration-150 ease-in-out text-sm">
         <i class="fas fa-lock mr-2"></i>Admin Panel
     </button>
+
     <div id="app" class="flex items-center justify-center p-4">
     </div>
+
     <div id="violationModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center">
             <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
@@ -59,6 +63,7 @@
             </button>
         </div>
     </div>
+    
     <div id="quizOffModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center">
             <i class="fas fa-pause-circle text-4xl text-blue-500 mb-4"></i>
@@ -69,18 +74,19 @@
             </button>
         </div>
     </div>
+    
     <script>
         // --- SUPABASE CONFIGURATION ---
-        // Project Ref ID is tdxausibwaagbhnbgkgz
+        // !!! IMPORTANT: REPLACE THESE PLACEHOLDERS WITH YOUR ACTUAL SUPABASE PROJECT DETAILS !!!
         const SUPABASE_URL = 'https://tdxausibwaagbhnbgkgz.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkeGF1c2lid2FhZ2JobmJna2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNDgyMDYsImV4cCI6MjA3ODYyNDIwNn0.ApeJFTg-pQaV2gigOUTGpKnMY_AFnT1v5DPpYCCmOKY';
         const SUPABASE_TABLE_NAME = 'quiz_submissions'; 
-        
+
         // Initialize Supabase client
         const { createClient } = supabase;
         const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         // ------------------------------
-        
+
         // --- QUIZ DATA ---
         const quizQuestions = [
             { question: "Who is the CEO of Apple Inc.?", options: ["Steve Jobs", "Tim Cook", "Mark Zuckerberg", "Elon Musk"], answer: "Tim Cook" },
@@ -104,24 +110,31 @@
             { question: "Which company became India’s first to cross $250 billion market cap?", options: ["Reliance Industries", "Tata Consultancy Services", "Infosys", "HDFC Bank"], answer: "Reliance Industries" },
             { question: "Which Indian bank ranked highest in “World’s Best Banks 2024” by Forbes?", options: ["HDFC Bank", "SBI", "Axis Bank", "ICICI"], answer: "HDFC Bank" }
         ];
-        
+
         // --- STATE MANAGEMENT ---
         let studentInfo = {};
         let currentQuestionIndex = 0;
         let studentResponses = Array(quizQuestions.length).fill(null);
         let timerInterval;
-        const TIME_PER_QUESTION = 10;
+        // Time per question is 10 seconds
+        const TIME_PER_QUESTION = 10; 
         let timeLeft = TIME_PER_QUESTION;
-        let isQuizActive = localStorage.getItem('isQuizActive') === 'false' ? false : true;
+        
+        // Check localStorage for quiz status, default to true
+        let isQuizActive = localStorage.getItem('isQuizActive') === 'false' ? false : true; 
+        
+        // Updated violation structure for granular tracking
         let proctoringViolations = {
             total: 0,
             windowSwitch: 0,
             copyPaste: 0
         };
-        const MAX_VIOLATIONS = 3;
-        let violationCooldown = false;
-        const COOLDOWN_DURATION = 2000;
+        const MAX_VIOLATIONS = 3; // Max total violations before ending exam
         
+        // Debounce mechanism to prevent multiple window-switch counts
+        let violationCooldown = false; 
+        const COOLDOWN_DURATION = 2000; // 2 seconds cooldown
+
         const APP_CONTAINER = document.getElementById('app');
         const ADMIN_BUTTON = document.getElementById('adminButton');
         const VIOLATION_MODAL = document.getElementById('violationModal');
@@ -129,13 +142,19 @@
         const VIOLATION_MESSAGE = document.getElementById('violationMessage');
         const QUIZ_OFF_MODAL = document.getElementById('quizOffModal');
         const QUIZ_OFF_CONFIRM_BTN = document.getElementById('quizOffConfirmBtn');
-        
+
         // --- HELPER FUNCTIONS ---
+
+        // Manages view switching
         function setView(viewName) {
+            // Hide all custom modals when switching views
             VIOLATION_MODAL.style.display = 'none';
-            QUIZ_OFF_MODAL.style.display = 'none';
+            QUIZ_OFF_MODAL.style.display = 'none'; 
+            
+            // Ensure the sign-in form is visible before rendering it
             const signInForm = document.getElementById('signInForm');
-            if(signInForm) signInForm.style.display = 'block';
+            if(signInForm) signInForm.style.display = 'block'; 
+
             ADMIN_BUTTON.style.display = (viewName === 'quiz') ? 'none' : 'block';
             APP_CONTAINER.innerHTML = '';
             if (viewName === 'signin') renderSignIn();
@@ -144,7 +163,8 @@
             else if (viewName === 'admin') renderAdminLogin();
             else if (viewName === 'leaderboard') renderLeaderboard();
         }
-        
+
+        // Utility to show a temporary message (since we can't use alert)
         function showTempMessage(msg) {
             let tempDiv = document.getElementById('tempMessage');
             if (!tempDiv) {
@@ -157,7 +177,8 @@
             tempDiv.style.opacity = '1';
             setTimeout(() => { tempDiv.style.opacity = '0'; }, 3000);
         }
-        
+
+        // Retrieves leaderboard data from Local Storage
         function getLeaderboard() {
             try {
                 const data = localStorage.getItem('quizLeaderboard');
@@ -167,7 +188,8 @@
                 return [];
             }
         }
-        
+
+        // Saves current student's score to Local Storage (returns the result object for Supabase)
         function saveResult(name, email, admissionNo, score, totalQuestions, violations) {
             const leaderboard = getLeaderboard();
             const result = {
@@ -177,57 +199,50 @@
                 score: score,
                 total: totalQuestions,
                 percentage: ((score / totalQuestions) * 100).toFixed(2),
-                violations: violations.total,
+                violations: violations.total, 
                 windowSwitchViolations: violations.windowSwitch,
                 copyPasteViolations: violations.copyPaste,
                 timestamp: new Date().toLocaleString()
             };
             leaderboard.push(result);
+            // Sort by score (descending) then by time (ascending) to break ties
             leaderboard.sort((a, b) => b.score - a.score || new Date(a.timestamp) - new Date(b.timestamp));
             localStorage.setItem('quizLeaderboard', JSON.stringify(leaderboard));
-            return result;
+            return result; // Return the result object for Supabase upload
         }
-        
-        // ⚠️ FIXED: DATABASE UPLOAD FUNCTION
+
+        // NEW ASYNC FUNCTION: Upload result to Supabase
         async function uploadResultToSupabase(resultData) {
-            if (SUPABASE_URL.includes('YOUR_SUPABASE_URL_HERE')) {
+            if (SUPABASE_URL === 'https://tdxausibwaagbhnbgkgz.supabase.co') {
                 console.error("Supabase credentials not configured. Skipping upload.");
                 showTempMessage('Submission saved locally, but database credentials are not set.');
                 return;
             }
-        
-            // Ensure data maps exactly to your Supabase table columns (Schema Match)
+            
+            // Structure data for the Supabase table
             const dataToInsert = {
                 student_name: resultData.name,
                 college_email: resultData.email,
                 admission_no: resultData.admissionNo,
                 score: resultData.score,
                 total_questions: resultData.total,
-                percentage: resultData.percentage, 
+                percentage: parseFloat(resultData.percentage),
                 total_violations: resultData.violations,
                 window_switch_violations: resultData.windowSwitchViolations,
                 copy_paste_violations: resultData.copyPasteViolations,
                 submission_time: new Date().toISOString()
             };
-        
+
             console.log("Attempting to insert:", dataToInsert);
-        
+
             try {
-                // Use the table name defined in the config
                 const { error } = await client
                     .from(SUPABASE_TABLE_NAME)
                     .insert([dataToInsert]);
-        
+
                 if (error) {
-                    console.error('Error inserting data into Supabase:', error);
-                    let errorMessage = 'Database error: Failed to save results. Check console for details.';
-                    
-                    // Specific RLS error check
-                    if (error.message.includes('permission denied') || error.code === '42501') {
-                        errorMessage = 'Database error: RLS (Row Level Security) is blocking the save operation. See Supabase dashboard.';
-                    }
-                    
-                    showTempMessage(errorMessage);
+                    console.error('Error inserting data into Supabase:', error.message);
+                    showTempMessage('Database error: Failed to save results. Check console.');
                 } else {
                     console.log('Successfully saved results to Supabase.');
                     showTempMessage('Quiz submitted and result saved to database.');
@@ -237,25 +252,32 @@
                 showTempMessage('Connection error: Could not reach database.');
             }
         }
-        // ----------------------------------------
-        
+
+        // Toggle Quiz Status (Admin Feature)
         function toggleQuizState() {
             isQuizActive = !isQuizActive;
             localStorage.setItem('isQuizActive', isQuizActive);
             renderLeaderboard();
         }
         
+        // Show Quiz Off Modal
         function showQuizOffModal() {
             const signInForm = document.getElementById('signInForm');
-            if (signInForm) signInForm.style.display = 'none';
+            if (signInForm) signInForm.style.display = 'none'; 
+            
             QUIZ_OFF_MODAL.style.display = 'flex';
+            
+            // Set up button to dismiss modal and re-show the sign-in form
             QUIZ_OFF_CONFIRM_BTN.onclick = () => {
                 QUIZ_OFF_MODAL.style.display = 'none';
-                if(signInForm) setView('signin');
+                if(signInForm) setView('signin'); // Reload signin view to refresh state
             };
         }
-        
-        // --- PROCTORING LOGIC ---
+
+
+        // --- PROCTORING LOGIC (Unchanged) ---
+
+        // Request Full Screen
         function requestFullScreen() {
             const element = document.documentElement;
             if (element.requestFullscreen) {
@@ -268,7 +290,8 @@
                 element.msRequestFullscreen();
             }
         }
-        
+
+        // Exit Full Screen
         function exitFullScreen() {
             if (document.exitFullscreen) {
                 document.exitFullscreen();
@@ -281,82 +304,94 @@
             }
         }
         
+        // Show custom modal instead of alert
         function showViolationModal(isTerminating) {
             if (isTerminating) {
                 VIOLATION_MESSAGE.innerHTML = `
-                    <p class="text-red-700 font-semibold">FINAL WARNING: ${MAX_VIOLATIONS} violations detected.</p>
+                    <p class="text-red-700 font-semibold">FINAL WARNING: ${MAX_VIOLATIONS} violations detected.</p> 
                     <p>The exam has been terminated. Your score will be recorded with violations.</p>
                 `;
                 MODAL_CONFIRM_BTN.textContent = 'End Exam';
                 MODAL_CONFIRM_BTN.onclick = () => {
                     VIOLATION_MODAL.style.display = 'none';
                     stopTimer();
-                    disableProctoring();
+                    disableProctoring(); 
                     exitFullScreen();
-                    calculateAndShowResults(true);
+                    calculateAndShowResults(true); 
                 };
             } else {
                 VIOLATION_MESSAGE.innerHTML = `
-                    Do not violate the rules.
-                    <span class="font-bold">Total violations: ${proctoringViolations.total}/${MAX_VIOLATIONS}.</span>
+                    Do not violate the rules. 
+                    <span class="font-bold">Total violations: ${proctoringViolations.total}/${MAX_VIOLATIONS}.</span> 
                     The exam will terminate upon the ${MAX_VIOLATIONS}rd violation.
                 `;
                 MODAL_CONFIRM_BTN.textContent = 'Return to Quiz';
                 MODAL_CONFIRM_BTN.onclick = () => {
                     VIOLATION_MODAL.style.display = 'none';
-                    requestFullScreen();
+                    requestFullScreen(); 
                 };
             }
             VIOLATION_MODAL.style.display = 'flex';
         }
-        
+
+        // Proctoring violation handler
         function handleProctoringViolation(type) {
             if (currentQuestionIndex >= quizQuestions.length) {
-                return;
+                return; 
             }
+            
             if (type === 'windowSwitch') {
-                if (violationCooldown) return;
+                if (violationCooldown) return; 
+                
                 proctoringViolations.windowSwitch++;
+                
                 violationCooldown = true;
                 setTimeout(() => { violationCooldown = false; }, COOLDOWN_DURATION);
-                requestFullScreen();
-            }
+
+                requestFullScreen(); 
+            } 
             else if (type === 'copyPaste') {
                 proctoringViolations.copyPaste++;
             } else {
-                return;
+                return; 
             }
-            proctoringViolations.total++;
             
+            proctoringViolations.total++;
+
             const violationDisplay = document.getElementById('violationCountDisplay');
             if (violationDisplay) {
                 violationDisplay.innerHTML = `⚠️ Violations: ${proctoringViolations.total} / ${MAX_VIOLATIONS} (Tab: ${proctoringViolations.windowSwitch}, Copy/Paste: ${proctoringViolations.copyPaste})`;
             }
-            
+
             if (proctoringViolations.total >= MAX_VIOLATIONS) {
-                showViolationModal(true);
+                showViolationModal(true); 
             } else if (type === 'windowSwitch') {
-                showViolationModal(false);
+                showViolationModal(false); 
             }
         }
         
+        // Named functions for event listeners to allow proper removal
+
         const visibilityChangeHandler = () => {
             if (document.hidden) {
                 handleProctoringViolation('windowSwitch');
             }
         };
-        
+
         const blurHandler = () => {
             handleProctoringViolation('windowSwitch');
         };
-        
+
         const copyCutPasteHandler = (e) => {
             e.preventDefault();
+            
             const message = e.type === 'paste' ? 'Pasting is blocked during the exam.' : 'Copying/cutting content is blocked during the exam.';
-            showTempMessage(message);
+            showTempMessage(message); 
+            
             handleProctoringViolation('copyPaste');
         };
-        
+
+        // Attach event listeners for proctoring
         function enableProctoring() {
             document.addEventListener('visibilitychange', visibilityChangeHandler);
             window.addEventListener('blur', blurHandler);
@@ -364,7 +399,8 @@
             document.addEventListener('cut', copyCutPasteHandler);
             document.addEventListener('paste', copyCutPasteHandler);
         }
-        
+
+        // Detach event listeners
         function disableProctoring() {
             document.removeEventListener('visibilitychange', visibilityChangeHandler);
             window.removeEventListener('blur', blurHandler);
@@ -372,11 +408,13 @@
             document.removeEventListener('cut', copyCutPasteHandler);
             document.removeEventListener('paste', copyCutPasteHandler);
         }
-        // --- QUIZ TIMER & NAVIGATION LOGIC ---
-        
+
+        // --- QUIZ TIMER & NAVIGATION LOGIC (Unchanged) ---
+
         function updateTimerDisplay() {
             const progressBar = document.getElementById('progressBar');
-            const countdownTimer = document.getElementById('countdownValue');
+            const countdownTimer = document.getElementById('countdownValue'); 
+            
             if (progressBar) {
                 const percentage = (timeLeft / TIME_PER_QUESTION) * 100;
                 progressBar.style.width = percentage + '%';
@@ -385,16 +423,16 @@
                 countdownTimer.textContent = timeLeft;
             }
         }
-        
+
         function startTimer() {
             stopTimer();
             timeLeft = TIME_PER_QUESTION;
             updateTimerDisplay();
-            
+
             timerInterval = setInterval(() => {
                 timeLeft--;
                 updateTimerDisplay();
-                
+
                 if (timeLeft <= 0) {
                     stopTimer();
                     studentResponses[currentQuestionIndex] = null;
@@ -402,11 +440,11 @@
                 }
             }, 1000);
         }
-        
+
         function stopTimer() {
             clearInterval(timerInterval);
         }
-        
+
         function moveToNextQuestion() {
             currentQuestionIndex++;
             if (currentQuestionIndex < quizQuestions.length) {
@@ -419,8 +457,9 @@
                 calculateAndShowResults(false);
             }
         }
+
         // --- QUIZ RENDERING ---
-        
+
         function renderSignIn() {
             APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
             APP_CONTAINER.innerHTML = `
@@ -446,13 +485,16 @@
                     </form>
                 </div>
             `;
-            
+
             document.getElementById('signInForm').addEventListener('submit', function(e) {
                 e.preventDefault();
+                
+                // FEATURE CHECK: Block access if quiz is not active
                 if (!isQuizActive) {
                     showQuizOffModal();
-                    return;
+                    return; 
                 }
+                
                 studentInfo = {
                     name: document.getElementById('studentName').value.trim(),
                     email: document.getElementById('collegeEmail').value.trim(),
@@ -463,7 +505,7 @@
                 setView('quiz');
             });
         }
-        
+
         function renderQuiz() {
             APP_CONTAINER.className = "flex items-start justify-center min-h-screen p-4 bg-gray-100";
             APP_CONTAINER.innerHTML = `
@@ -472,20 +514,20 @@
                     <div id="progressBarContainer">
                         <div id="progressBar"></div>
                     </div>
-                    <div id="countdownTimer">Time Left: <span id="countdownValue">${TIME_PER_QUESTION}</span>s</div>
+                    <div id="countdownTimer">Time Left: <span id="countdownValue">${TIME_PER_QUESTION}</span>s</div> 
                     <div id="quizContent"></div>
                 </div>
             `;
             renderQuizQuestion();
             startTimer();
         }
-        
+
         function renderQuizQuestion() {
             const quizContent = document.getElementById('quizContent');
             const q = quizQuestions[currentQuestionIndex];
             const qNum = currentQuestionIndex + 1;
             const total = quizQuestions.length;
-            
+
             quizContent.innerHTML = `
                 <div class="mb-6">
                     <div class="text-sm font-medium text-blue-600 mb-2">Question ${qNum} of ${total}</div>
@@ -506,21 +548,23 @@
                 </div>
                 ${proctoringViolations.total > 0 ? `<p id="violationCountDisplay" class="mt-4 text-sm text-red-600 font-medium text-right">⚠️ Violations: ${proctoringViolations.total} / ${MAX_VIOLATIONS} (Tab: ${proctoringViolations.windowSwitch}, Copy/Paste: ${proctoringViolations.copyPaste})</p>` : `<p id="violationCountDisplay" class="mt-4 text-sm text-gray-500 font-medium text-right">No violations recorded.</p>`}
             `;
-            
+
             document.getElementById('nextButton').addEventListener('click', () => {
                 const selected = document.querySelector('input[name="answer"]:checked');
+                // Record the response 
                 studentResponses[currentQuestionIndex] = selected ? selected.value : null;
                 stopTimer();
                 moveToNextQuestion();
             });
-            
+
+            // Listen for option selection to record early answer
             document.getElementById('optionsContainer').addEventListener('change', (e) => {
                 if (e.target.name === 'answer') {
                     studentResponses[currentQuestionIndex] = e.target.value;
                 }
             });
         }
-        
+
         function calculateAndShowResults(wasTerminated) {
             let score = 0;
             quizQuestions.forEach((q, index) => {
@@ -528,16 +572,18 @@
                     score++;
                 }
             });
-            
+
+            // 1. Save results locally (for Admin Leaderboard view)
             const result = saveResult(
-                studentInfo.name,
-                studentInfo.email,
-                studentInfo.admissionNo,
-                score,
-                quizQuestions.length,
+                studentInfo.name, 
+                studentInfo.email, 
+                studentInfo.admissionNo, 
+                score, 
+                quizQuestions.length, 
                 proctoringViolations
             );
-            
+
+            // 2. Upload results to Supabase (asynchronously)
             uploadResultToSupabase(result);
             
             APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
@@ -557,19 +603,145 @@
                         </div>
                         <div class="flex justify-between items-center text-lg text-gray-800">
                             <span>Proctoring Violations (Total):</span>
-                            <span class="font-bold text-red-600">${proctoringViolations.total}</span>
+                            <span class="font-bold text-red-700">${proctoringViolations.total}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-md text-gray-700 mt-2 pt-2 border-t border-gray-200">
+                            <span>- Tab/Window Switch:</span>
+                            <span class="font-semibold text-red-600">${proctoringViolations.windowSwitch}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-md text-gray-700">
+                            <span>- Copy/Paste Attempt:</span>
+                            <span class="font-semibold text-red-600">${proctoringViolations.copyPaste}</span>
                         </div>
                     </div>
-                    <button onclick="setView('signin')" class="w-full py-3 px-4 rounded-lg text-white font-semibold bg-gray-600 hover:bg-gray-700 transition">
-                        Start New Quiz or View Leaderboard
+
+                    <button onclick="setView('signin')" class="w-full py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+                        Return to Sign-In
                     </button>
                 </div>
             `;
         }
-        
-        // Initial call to start the app
+
+        // --- ADMIN / LEADERBOARD (Includes Toggle Button) ---
+
+        function renderAdminLogin() {
+            APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
+            APP_CONTAINER.innerHTML = `
+                <div class="w-full max-w-sm bg-white rounded-xl shadow-xl p-8">
+                    <h2 class="text-2xl font-bold text-center text-gray-900 mb-6"><i class="fas fa-user-shield mr-2 text-red-600"></i>Admin Login</h2>
+                    <p class="text-center text-gray-500 text-sm mb-4"></p>
+                    <form id="adminLoginForm" class="space-y-4">
+                        <div>
+                            <label for="adminId" class="block text-sm font-medium text-gray-700">Admin ID</label>
+                            <input type="text" id="adminId" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
+                        </div>
+                        <div>
+                            <label for="adminPassword" class="block text-sm font-medium text-gray-700">Password</label>
+                            <input type="password" id="adminPassword" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
+                        </div>
+                        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out mt-6">
+                            Login
+                        </button>
+                        <button type="button" onclick="setView('signin')" class="w-full mt-2 py-2 px-4 rounded-lg text-sm font-medium text-gray-600 border border-gray-300 hover:bg-gray-100 transition duration-150 ease-in-out">
+                            Back to Home
+                        </button>
+                    </form>
+                </div>
+            `;
+
+            document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const id = document.getElementById('adminId').value;
+                const password = document.getElementById('adminPassword').value;
+
+                if (id === 'admin' && password === 'admin123') { 
+                    setView('leaderboard');
+                } else {
+                    const loginMessage = document.createElement('p');
+                    loginMessage.className = 'text-sm text-red-500 mt-2 text-center';
+                    loginMessage.textContent = 'Invalid Admin ID or Password.';
+                    document.getElementById('adminLoginForm').appendChild(loginMessage);
+                    setTimeout(() => loginMessage.remove(), 3000);
+                }
+            });
+        }
+
+        function renderLeaderboard() {
+            const leaderboard = getLeaderboard();
+            APP_CONTAINER.className = "flex items-start justify-center min-h-screen p-4 bg-gray-100";
+            
+            const tableRows = leaderboard.map((entry, index) => `
+                <tr class="hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.admissionNo}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-700">${entry.score}/${entry.total}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${entry.percentage >= 80 ? 'text-green-600' : entry.percentage >= 50 ? 'text-yellow-600' : 'text-red-600'}">${entry.percentage}%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-500">${entry.violations} (W:${entry.windowSwitchViolations || 0}, C:${entry.copyPasteViolations || 0})</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.timestamp}</td>
+                </tr>
+            `).join('');
+            
+            const tableContent = tableRows.length > 0 ? tableRows : `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500 font-medium bg-white">No results recorded yet.</td></tr>`;
+
+            APP_CONTAINER.innerHTML = `
+                <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl p-8 mt-10">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-900"><i class="fas fa-trophy mr-2 text-yellow-500"></i>Real-Time Leaderboard</h2>
+                        <div class="flex items-center space-x-4">
+                            <button id="quizToggleButton" class="px-4 py-2 rounded-lg text-sm font-medium text-white ${isQuizActive ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} transition duration-150">
+                                <i class="fas ${isQuizActive ? 'fa-toggle-on' : 'fa-toggle-off'} mr-2"></i>Quiz Status: ${isQuizActive ? 'ON' : 'OFF'}
+                            </button>
+                            <button onclick="setView('signin')" class="px-4 py-2 rounded-lg text-sm font-medium text-blue-600 border border-blue-600 hover:bg-blue-50 transition duration-150">
+                                Return Home
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto shadow border-b border-gray-200 sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admission No.</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Violations (W/C)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                ${tableContent}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            document.getElementById('quizToggleButton').addEventListener('click', toggleQuizState);
+        }
+
+
+        // --- INITIALIZATION (Unchanged) ---
         document.addEventListener('DOMContentLoaded', () => {
             setView('signin');
+            
+            // Handle Admin Button Click
+            ADMIN_BUTTON.addEventListener('click', () => {
+                setView('admin'); // Always go to admin login screen
+            });
+
+            // Full-screen change handler function 
+            const fullScreenChangeHandler = () => {
+                if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && currentQuestionIndex < quizQuestions.length && VIOLATION_MODAL.style.display !== 'flex') {
+                    handleProctoringViolation('windowSwitch'); 
+                }
+            };
+
+            // Attach full-screen handlers
+            document.addEventListener('fullscreenchange', fullScreenChangeHandler);
+            document.addEventListener('webkitfullscreenchange', fullScreenChangeHandler);
+            document.addEventListener('mozfullscreenchange', fullScreenChangeHandler);
         });
     </script>
 </body>
