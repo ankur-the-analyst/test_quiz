@@ -8,15 +8,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* Custom styles to ensure full-screen on modern browsers */
         #app {
             min-height: 100vh;
         }
+        /* Style for the leader board button, always visible */
         #adminButton {
             position: fixed;
             top: 10px;
             right: 10px;
             z-index: 100;
         }
+        /* Custom progress bar styles */
         #progressBarContainer {
             position: relative;
             height: 8px;
@@ -27,14 +30,14 @@
         }
         #progressBar {
             height: 100%;
-            width: 100%;
-            background-color: #ef4444;
-            transition: none;
+            width: 100%; /* Start full */
+            background-color: #ef4444; /* Red color for timer */
+            transition: none; /* Removed transition for smooth timer animation */
         }
         #countdownTimer {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #ef4444;
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 700; /* font-bold */
+            color: #ef4444; /* Red color */
             text-align: right;
             margin-bottom: 10px;
         }
@@ -59,7 +62,7 @@
             </button>
         </div>
     </div>
-
+    
     <div id="quizOffModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center">
             <i class="fas fa-pause-circle text-4xl text-blue-500 mb-4"></i>
@@ -70,15 +73,23 @@
             </button>
         </div>
     </div>
-
+    
     <script>
-        const SUPABASE_URL = 'https://kihnwotzwoehelggmhxx.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpaG53b3R6d29laGVsZ2dtaHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyOTM2NTcsImV4cCI6MjA3ODg2OTY1N30.0y6EI1kjVKRlwDY8QSxMBTzllm85lVVMHlZJ881MJDc';
-        const SUPABASE_TABLE_NAME = 'quiz_submissions';
+        // --- SUPABASE CONFIGURATION ---
+        // !!! IMPORTANT: REPLACE THESE PLACEHOLDERS WITH YOUR ACTUAL SUPABASE PROJECT DETAILS !!!
+        const SUPABASE_URL = 'https://tdxausibwaagbhnbgkgz.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkeGF1c2lid2FhZ2JobmJna2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNDgyMDYsImV4cCI6MjA3ODYyNDIwNn0.ApeJFTg-pQaV2gigOUTGpKnMY_AFnT1v5DPpYCCmOKY';
+        const SUPABASE_TABLE_NAME = 'quiz_submissions'; 
 
+        // NOTE: Use a static, valid UUID for the quiz ID. You can change this if you have multiple quizzes.
+        const STATIC_QUIZ_UUID = '5f4b3d2c-1a0e-9f8d-7c6b-5a4e3d2c1b0a';
+
+        // Initialize Supabase client
         const { createClient } = supabase;
         const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // ------------------------------
 
+        // --- QUIZ DATA ---
         const quizQuestions = [
             { question: "Who is the CEO of Apple Inc.?", options: ["Steve Jobs", "Tim Cook", "Mark Zuckerberg", "Elon Musk"], answer: "Tim Cook" },
             { question: "Who is the CEO of HDFC Bank (as of 2025)?", options: ["Aditya Puri", "Sashidhar Jagdishan", "N. Chandrasekaran", "Shailesh Chandra"], answer: "Sashidhar Jagdishan" },
@@ -86,40 +97,45 @@
             { question: "What does IPO stand for?", options: ["Initial Public Offering", "International Product Order", "Industrial Policy Objective", "Internal Purchase Option"], answer: "Initial Public Offering" },
             { question: "What does KPI stand for?", options: ["Key Performance Indicator", "Knowledge Processing Index", "Key Product Inventory", "Known Profit Index"], answer: "Key Performance Indicator" },
             { question: "What is a blue-chip company?", options: ["Large, established, financially sound firm", "New startup", "Government enterprise", "Small-cap company"], answer: "Large, established, financially sound firm" },
-            { question: "The 2025 Union Budget of India was presented on", options: ["1 January 2025", "1 February 2025", "1 March 2025", "1 April 2025"], answer: "1 February 2025" },
-            { question: "The term "start-up unicorn" refers to a private company valued at:", options: ["Over US $100 million", "Over US $1 billion", "Over US $500 million", "Over US $10 billion"], answer: "Over US $1 billion" },
-            { question: "The program "PLI scheme" in India is related to:", options: ["Private Lending Initiative", "Production Linked Incentive", "Public Listing Initiative", "Pension Linked Interest"], answer: "Production Linked Incentive" },
+            { question: "The 2025 Union Budget of India was presented on", options: ["1 January 2025", "1 February 2025", "1 March 2025", "1 April 2025"], answer: "1 March 2025" },
+            { question: "The term “start-up unicorn” refers to a private company valued at:", options: ["Over US $100 million", "Over US $1 billion", "Over US $500 million", "Over US $10 billion"], answer: "Over US $1 billion" },
+            { question: "The program “PLI scheme” in India is related to:", options: ["Private Lending Initiative", "Production Linked Incentive", "Public Listing Initiative", "Pension Linked Interest"], answer: "Production Linked Incentive" },
             { question: "The parent company of Tanishq is:", options: ["Titan", "Reliance", "Aditya Birla Group", "Dabur"], answer: "Titan" },
-            { question: ""Think Different" is associated with:", options: ["Apple", "Microsoft", "Samsung", "Dell"], answer: "Apple" },
+            { question: "“Think Different” is associated with:", options: ["Apple", "Microsoft", "Samsung", "Dell"], answer: "Apple" },
             { question: "SEBI regulates:", options: ["Stock Market in India", "Banking Sector", "Insurance Companies", "E-commerce"], answer: "Stock Market in India" },
-            { question: ""The Big Four" accounting firms include all except:", options: ["Deloitte", "PwC", "EY", "KPMG India Limited"], answer: "KPMG India Limited" },
+            { question: "“The Big Four” accounting firms include all except:", options: ["Deloitte", "PwC", "EY", "KPMG India Limited"], answer: "KPMG India Limited" },
             { question: "Which is the largest public sector bank in India?", options: ["State Bank of India", "Punjab National Bank", "Bank of Baroda", "Canara Bank"], answer: "State Bank of India" },
             { question: "Who is the current Governor of RBI (2025)?", options: ["Shaktikanta Das", "Urjit Patel", "Raghuram Rajan", "D. Subbarao"], answer: "Shaktikanta Das" },
-            { question: "SBI's tagline is:", options: [""The Banker to Every Indian"", ""We Understand Your World"", ""Trusted Family Bank"", ""Your Perfect Partner""], answer: ""The Banker to Every Indian"" },
+            { question: "SBI’s tagline is:", options: ["“The Banker to Every Indian”", "“We Understand Your World”", "“Trusted Family Bank”", "“Your Perfect Partner”"], answer: "“The Banker to Every Indian”" },
             { question: "The first Indian bank to open a branch outside India was:", options: ["Bank of India", "SBI", "PNB", "Canara Bank"], answer: "Bank of India" },
-            { question: "Which startup is known as "India's leading edtech company"?", options: ["BYJU'S", "Unacademy", "Vedantu", "Simplilearn"], answer: "BYJU'S" },
-            { question: "Which company became India's first to cross $250 billion market cap?", options: ["Reliance Industries", "Tata Consultancy Services", "Infosys", "HDFC Bank"], answer: "Reliance Industries" },
-            { question: "Which Indian bank ranked highest in "World's Best Banks 2024" by Forbes?", options: ["HDFC Bank", "SBI", "Axis Bank", "ICICI"], answer: "HDFC Bank" }
+            { question: "Which startup is known as “India’s leading edtech company”?", options: ["BYJU’S", "Unacademy", "Vedantu", "Simplilearn"], answer: "BYJU’S" },
+            { question: "Which company became India’s first to cross $250 billion market cap?", options: ["Reliance Industries", "Tata Consultancy Services", "Infosys", "HDFC Bank"], answer: "Reliance Industries" },
+            { question: "Which Indian bank ranked highest in “World’s Best Banks 2024” by Forbes?", options: ["HDFC Bank", "SBI", "Axis Bank", "ICICI"], answer: "HDFC Bank" }
         ];
 
+        // --- STATE MANAGEMENT ---
         let studentInfo = {};
         let currentQuestionIndex = 0;
         let studentResponses = Array(quizQuestions.length).fill(null);
         let timerInterval;
-        const TIME_PER_QUESTION = 10;
+        // Time per question is 10 seconds
+        const TIME_PER_QUESTION = 10; 
         let timeLeft = TIME_PER_QUESTION;
-
-        let isQuizActive = localStorage.getItem('isQuizActive') === 'false' ? false : true;
-
+        
+        // Check localStorage for quiz status, default to true
+        let isQuizActive = localStorage.getItem('isQuizActive') === 'false' ? false : true; 
+        
+        // Updated violation structure for granular tracking
         let proctoringViolations = {
             total: 0,
             windowSwitch: 0,
             copyPaste: 0
         };
-        const MAX_VIOLATIONS = 3;
-
-        let violationCooldown = false;
-        const COOLDOWN_DURATION = 2000;
+        const MAX_VIOLATIONS = 3; // Max total violations before ending exam
+        
+        // Debounce mechanism to prevent multiple window-switch counts
+        let violationCooldown = false; 
+        const COOLDOWN_DURATION = 2000; // 2 seconds cooldown
 
         const APP_CONTAINER = document.getElementById('app');
         const ADMIN_BUTTON = document.getElementById('adminButton');
@@ -129,12 +145,29 @@
         const QUIZ_OFF_MODAL = document.getElementById('quizOffModal');
         const QUIZ_OFF_CONFIRM_BTN = document.getElementById('quizOffConfirmBtn');
 
-        function setView(viewName) {
-            VIOLATION_MODAL.style.display = 'none';
-            QUIZ_OFF_MODAL.style.display = 'none';
+        // --- HELPER FUNCTIONS ---
 
+        /**
+         * Generates a simple, unique UUID (v4-like).
+         * This is necessary to satisfy the NOT NULL uuid fields in the database schema.
+         */
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Manages view switching
+        function setView(viewName) {
+            // Hide all custom modals when switching views
+            VIOLATION_MODAL.style.display = 'none';
+            QUIZ_OFF_MODAL.style.display = 'none'; 
+            
+            // Ensure the sign-in form is visible before rendering it
             const signInForm = document.getElementById('signInForm');
-            if(signInForm) signInForm.style.display = 'block';
+            if(signInForm) signInForm.style.display = 'block'; 
 
             ADMIN_BUTTON.style.display = (viewName === 'quiz') ? 'none' : 'block';
             APP_CONTAINER.innerHTML = '';
@@ -145,6 +178,7 @@
             else if (viewName === 'leaderboard') renderLeaderboard();
         }
 
+        // Utility to show a temporary message (since we can't use alert)
         function showTempMessage(msg) {
             let tempDiv = document.getElementById('tempMessage');
             if (!tempDiv) {
@@ -158,6 +192,7 @@
             setTimeout(() => { tempDiv.style.opacity = '0'; }, 3000);
         }
 
+        // Retrieves leaderboard data from Local Storage
         function getLeaderboard() {
             try {
                 const data = localStorage.getItem('quizLeaderboard');
@@ -168,6 +203,7 @@
             }
         }
 
+        // Saves current student's score to Local Storage (returns the result object for Supabase)
         function saveResult(name, email, admissionNo, score, totalQuestions, violations) {
             const leaderboard = getLeaderboard();
             const result = {
@@ -177,29 +213,44 @@
                 score: score,
                 total: totalQuestions,
                 percentage: ((score / totalQuestions) * 100).toFixed(2),
-                violations: violations.total,
+                violations: violations.total, 
                 windowSwitchViolations: violations.windowSwitch,
                 copyPasteViolations: violations.copyPaste,
                 timestamp: new Date().toLocaleString()
             };
             leaderboard.push(result);
+            // Sort by score (descending) then by time (ascending) to break ties
             leaderboard.sort((a, b) => b.score - a.score || new Date(a.timestamp) - new Date(b.timestamp));
             localStorage.setItem('quizLeaderboard', JSON.stringify(leaderboard));
-            return result;
+            return result; // Return the result object for Supabase upload
         }
 
+        // NEW ASYNC FUNCTION: Upload result to Supabase
         async function uploadResultToSupabase(resultData) {
+            
+            // Generate a unique ID for this submission (acting as the student_id for the submission)
+            const submissionUUID = generateUUID(); 
+
+            // Structure data for the Supabase table (aligned with user's SQL schema)
             const dataToInsert = {
-                student_name: resultData.name,
-                college_email: resultData.email,
-                admission_no: resultData.admissionNo,
+                // Mandatory UUID fields (using generated UUIDs to ensure uniqueness and validity)
+                student_id: submissionUUID,
+                quiz_id: STATIC_QUIZ_UUID,       
+
+                // Data gathered from the quiz
                 score: resultData.score,
                 total_questions: resultData.total,
-                percentage: parseFloat(resultData.percentage),
+                // Sending percentage as TEXT as per your SQL schema definition
+                percentage: resultData.percentage.toString(), 
                 total_violations: resultData.violations,
                 window_switch_violations: resultData.windowSwitchViolations,
                 copy_paste_violations: resultData.copyPasteViolations,
-                submission_time: new Date().toISOString()
+                submission_time: new Date().toISOString(),
+                
+                // Student Info
+                student_name: resultData.name,
+                college_email: resultData.email,
+                admission_no: resultData.admissionNo,
             };
 
             console.log("Attempting to insert:", dataToInsert);
@@ -211,35 +262,43 @@
 
                 if (error) {
                     console.error('Error inserting data into Supabase:', error.message);
-                    showTempMessage('Database error: Failed to save results. Check console.');
+                    // Provide detailed error message if possible
+                    showTempMessage(`Database error: Failed to save results. Check console. Details: ${error.message}`);
                 } else {
                     console.log('Successfully saved results to Supabase.');
                     showTempMessage('Quiz submitted and result saved to database.');
                 }
             } catch (e) {
                 console.error('Supabase connection error:', e);
-                showTempMessage('Connection error: Could not reach database.');
+                showTempMessage('Connection error: Could not reach database. Check URL/Key.');
             }
         }
 
+        // Toggle Quiz Status (Admin Feature)
         function toggleQuizState() {
             isQuizActive = !isQuizActive;
             localStorage.setItem('isQuizActive', isQuizActive);
             renderLeaderboard();
         }
-
+        
+        // Show Quiz Off Modal
         function showQuizOffModal() {
             const signInForm = document.getElementById('signInForm');
-            if (signInForm) signInForm.style.display = 'none';
-
+            if (signInForm) signInForm.style.display = 'none'; 
+            
             QUIZ_OFF_MODAL.style.display = 'flex';
-
+            
+            // Set up button to dismiss modal and re-show the sign-in form
             QUIZ_OFF_CONFIRM_BTN.onclick = () => {
                 QUIZ_OFF_MODAL.style.display = 'none';
-                if(signInForm) setView('signin');
+                if(signInForm) setView('signin'); // Reload signin view to refresh state
             };
         }
 
+
+        // --- PROCTORING LOGIC (Unchanged) ---
+
+        // Request Full Screen
         function requestFullScreen() {
             const element = document.documentElement;
             if (element.requestFullscreen) {
@@ -253,6 +312,7 @@
             }
         }
 
+        // Exit Full Screen
         function exitFullScreen() {
             if (document.exitFullscreen) {
                 document.exitFullscreen();
@@ -264,57 +324,59 @@
                 document.msExitFullscreen();
             }
         }
-
+        
+        // Show custom modal instead of alert
         function showViolationModal(isTerminating) {
             if (isTerminating) {
                 VIOLATION_MESSAGE.innerHTML = `
-                    <p class="text-red-700 font-semibold">FINAL WARNING: ${MAX_VIOLATIONS} violations detected.</p>
+                    <p class="text-red-700 font-semibold">FINAL WARNING: ${MAX_VIOLATIONS} violations detected.</p> 
                     <p>The exam has been terminated. Your score will be recorded with violations.</p>
                 `;
                 MODAL_CONFIRM_BTN.textContent = 'End Exam';
                 MODAL_CONFIRM_BTN.onclick = () => {
                     VIOLATION_MODAL.style.display = 'none';
                     stopTimer();
-                    disableProctoring();
+                    disableProctoring(); 
                     exitFullScreen();
-                    calculateAndShowResults(true);
+                    calculateAndShowResults(true); 
                 };
             } else {
                 VIOLATION_MESSAGE.innerHTML = `
-                    Do not violate the rules.
-                    <span class="font-bold">Total violations: ${proctoringViolations.total}/${MAX_VIOLATIONS}.</span>
+                    Do not violate the rules. 
+                    <span class="font-bold">Total violations: ${proctoringViolations.total}/${MAX_VIOLATIONS}.</span> 
                     The exam will terminate upon the ${MAX_VIOLATIONS}rd violation.
                 `;
                 MODAL_CONFIRM_BTN.textContent = 'Return to Quiz';
                 MODAL_CONFIRM_BTN.onclick = () => {
                     VIOLATION_MODAL.style.display = 'none';
-                    requestFullScreen();
+                    requestFullScreen(); 
                 };
             }
             VIOLATION_MODAL.style.display = 'flex';
         }
 
+        // Proctoring violation handler
         function handleProctoringViolation(type) {
             if (currentQuestionIndex >= quizQuestions.length) {
-                return;
+                return; 
             }
-
+            
             if (type === 'windowSwitch') {
-                if (violationCooldown) return;
-
+                if (violationCooldown) return; 
+                
                 proctoringViolations.windowSwitch++;
-
+                
                 violationCooldown = true;
                 setTimeout(() => { violationCooldown = false; }, COOLDOWN_DURATION);
 
-                requestFullScreen();
-            }
+                requestFullScreen(); 
+            } 
             else if (type === 'copyPaste') {
                 proctoringViolations.copyPaste++;
             } else {
-                return;
+                return; 
             }
-
+            
             proctoringViolations.total++;
 
             const violationDisplay = document.getElementById('violationCountDisplay');
@@ -323,11 +385,13 @@
             }
 
             if (proctoringViolations.total >= MAX_VIOLATIONS) {
-                showViolationModal(true);
+                showViolationModal(true); 
             } else if (type === 'windowSwitch') {
-                showViolationModal(false);
+                showViolationModal(false); 
             }
         }
+        
+        // Named functions for event listeners to allow proper removal
 
         const visibilityChangeHandler = () => {
             if (document.hidden) {
@@ -341,13 +405,14 @@
 
         const copyCutPasteHandler = (e) => {
             e.preventDefault();
-
+            
             const message = e.type === 'paste' ? 'Pasting is blocked during the exam.' : 'Copying/cutting content is blocked during the exam.';
-            showTempMessage(message);
-
+            showTempMessage(message); 
+            
             handleProctoringViolation('copyPaste');
         };
 
+        // Attach event listeners for proctoring
         function enableProctoring() {
             document.addEventListener('visibilitychange', visibilityChangeHandler);
             window.addEventListener('blur', blurHandler);
@@ -356,6 +421,7 @@
             document.addEventListener('paste', copyCutPasteHandler);
         }
 
+        // Detach event listeners
         function disableProctoring() {
             document.removeEventListener('visibilitychange', visibilityChangeHandler);
             window.removeEventListener('blur', blurHandler);
@@ -364,10 +430,12 @@
             document.removeEventListener('paste', copyCutPasteHandler);
         }
 
+        // --- QUIZ TIMER & NAVIGATION LOGIC (Unchanged) ---
+
         function updateTimerDisplay() {
             const progressBar = document.getElementById('progressBar');
-            const countdownTimer = document.getElementById('countdownValue');
-
+            const countdownTimer = document.getElementById('countdownValue'); 
+            
             if (progressBar) {
                 const percentage = (timeLeft / TIME_PER_QUESTION) * 100;
                 progressBar.style.width = percentage + '%';
@@ -411,6 +479,8 @@
             }
         }
 
+        // --- QUIZ RENDERING ---
+
         function renderSignIn() {
             APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
             APP_CONTAINER.innerHTML = `
@@ -439,12 +509,13 @@
 
             document.getElementById('signInForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-
+                
+                // FEATURE CHECK: Block access if quiz is not active
                 if (!isQuizActive) {
                     showQuizOffModal();
-                    return;
+                    return; 
                 }
-
+                
                 studentInfo = {
                     name: document.getElementById('studentName').value.trim(),
                     email: document.getElementById('collegeEmail').value.trim(),
@@ -464,7 +535,7 @@
                     <div id="progressBarContainer">
                         <div id="progressBar"></div>
                     </div>
-                    <div id="countdownTimer">Time Left: <span id="countdownValue">${TIME_PER_QUESTION}</span>s</div>
+                    <div id="countdownTimer">Time Left: <span id="countdownValue">${TIME_PER_QUESTION}</span>s</div> 
                     <div id="quizContent"></div>
                 </div>
             `;
@@ -501,11 +572,13 @@
 
             document.getElementById('nextButton').addEventListener('click', () => {
                 const selected = document.querySelector('input[name="answer"]:checked');
+                // Record the response 
                 studentResponses[currentQuestionIndex] = selected ? selected.value : null;
                 stopTimer();
                 moveToNextQuestion();
             });
 
+            // Listen for option selection to record early answer
             document.getElementById('optionsContainer').addEventListener('change', (e) => {
                 if (e.target.name === 'answer') {
                     studentResponses[currentQuestionIndex] = e.target.value;
@@ -521,17 +594,19 @@
                 }
             });
 
+            // 1. Save results locally (for Admin Leaderboard view)
             const result = saveResult(
-                studentInfo.name,
-                studentInfo.email,
-                studentInfo.admissionNo,
-                score,
-                quizQuestions.length,
+                studentInfo.name, 
+                studentInfo.email, 
+                studentInfo.admissionNo, 
+                score, 
+                quizQuestions.length, 
                 proctoringViolations
             );
 
+            // 2. Upload results to Supabase (asynchronously)
             uploadResultToSupabase(result);
-
+            
             APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
             APP_CONTAINER.innerHTML = `
                 <div class="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-10 text-center transform transition duration-500">
@@ -540,7 +615,7 @@
                     </div>
                     <h2 class="text-3xl font-extrabold text-gray-900 mb-3">${wasTerminated ? 'Exam Terminated & Submitted' : 'Quiz Submitted Successfully!'}</h2>
                     <p class="text-gray-600 mb-8">${wasTerminated ? `Due to ${proctoringViolations.total} violations, the exam ended forcefully.` : 'Your responses have been recorded.'}</p>
-
+                    
                     <div class="bg-blue-50 p-6 rounded-xl mb-8">
                         <h3 class="text-xl font-bold text-blue-800 mb-3">Your Result</h3>
                         <div class="flex justify-between items-center text-lg text-gray-800 border-b pb-2 mb-2">
@@ -568,11 +643,13 @@
             `;
         }
 
+        // --- ADMIN / LEADERBOARD (Includes Toggle Button) ---
+
         function renderAdminLogin() {
             APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
             APP_CONTAINER.innerHTML = `
                 <div class="w-full max-w-sm bg-white rounded-xl shadow-xl p-8">
-                    <h2 class="text-2xl font-bold text-center text-gray-900"><i class="fas fa-user-shield mr-2 text-red-600"></i>Admin Login</h2>
+                    <h2 class="text-2xl font-bold text-center text-gray-900 mb-6"><i class="fas fa-user-shield mr-2 text-red-600"></i>Admin Login</h2>
                     <p class="text-center text-gray-500 text-sm mb-4"></p>
                     <form id="adminLoginForm" class="space-y-4">
                         <div>
@@ -598,7 +675,7 @@
                 const id = document.getElementById('adminId').value;
                 const password = document.getElementById('adminPassword').value;
 
-                if (id === 'admin' && password === 'admin123') {
+                if (id === 'admin' && password === 'admin123') { 
                     setView('leaderboard');
                 } else {
                     const loginMessage = document.createElement('p');
@@ -613,7 +690,7 @@
         function renderLeaderboard() {
             const leaderboard = getLeaderboard();
             APP_CONTAINER.className = "flex items-start justify-center min-h-screen p-4 bg-gray-100";
-
+            
             const tableRows = leaderboard.map((entry, index) => `
                 <tr class="hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}</td>
@@ -625,7 +702,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.timestamp}</td>
                 </tr>
             `).join('');
-
+            
             const tableContent = tableRows.length > 0 ? tableRows : `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500 font-medium bg-white">No results recorded yet.</td></tr>`;
 
             APP_CONTAINER.innerHTML = `
@@ -641,7 +718,7 @@
                             </button>
                         </div>
                     </div>
-
+                    
                     <div class="overflow-x-auto shadow border-b border-gray-200 sm:rounded-lg">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -665,19 +742,24 @@
             document.getElementById('quizToggleButton').addEventListener('click', toggleQuizState);
         }
 
+
+        // --- INITIALIZATION (Unchanged) ---
         document.addEventListener('DOMContentLoaded', () => {
             setView('signin');
-
+            
+            // Handle Admin Button Click
             ADMIN_BUTTON.addEventListener('click', () => {
-                setView('admin');
+                setView('admin'); // Always go to admin login screen
             });
 
+            // Full-screen change handler function 
             const fullScreenChangeHandler = () => {
                 if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && currentQuestionIndex < quizQuestions.length && VIOLATION_MODAL.style.display !== 'flex') {
-                    handleProctoringViolation('windowSwitch');
+                    handleProctoringViolation('windowSwitch'); 
                 }
             };
 
+            // Attach full-screen handlers
             document.addEventListener('fullscreenchange', fullScreenChangeHandler);
             document.addEventListener('webkitfullscreenchange', fullScreenChangeHandler);
             document.addEventListener('mozfullscreenchange', fullScreenChangeHandler);
