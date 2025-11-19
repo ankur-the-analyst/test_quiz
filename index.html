@@ -53,10 +53,10 @@
     
     <div id="quizOffModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center">
-            <i class="fas fa-pause-circle text-4xl text-blue-500 mb-4"></i>
-            <h3 class="text-xl font-bold text-gray-900 mb-3">Quiz is Currently Unavailable</h3>
-            <p id="quizOffMessage" class="text-gray-600 mb-6 text-sm">The examination is currently paused by the administrator.</p>
-            <button id="quizOffConfirmBtn" class="w-full py-2 px-4 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 transition">Close</button>
+            <i class="fas fa-clock text-4xl text-blue-500 mb-4"></i>
+            <h3 class="text-xl font-bold text-gray-900 mb-3">Quiz Unavailable</h3>
+            <p id="quizOffMessage" class="text-gray-600 mb-6 text-base font-medium">The administrator has not started the quiz yet. Please wait.</p>
+            <button id="quizOffConfirmBtn" class="w-full py-2 px-4 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 transition">Okay, I will wait</button>
         </div>
     </div>
     
@@ -73,6 +73,7 @@
         const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // --- QUIZ DATA ---
+        // Note: This array will be shuffled when the user clicks Start
         const quizQuestions = [
             { question: "Who is the CEO of Apple Inc.?", options: ["Steve Jobs", "Tim Cook", "Mark Zuckerberg", "Elon Musk"], answer: "Tim Cook" },
             { question: "Who is the CEO of HDFC Bank (as of 2025)?", options: ["Aditya Puri", "Sashidhar Jagdishan", "N. Chandrasekaran", "Shailesh Chandra"], answer: "Sashidhar Jagdishan" },
@@ -133,6 +134,14 @@
             });
         }
 
+        // Fisher-Yates Shuffle Algorithm
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
         function setView(viewName) {
             VIOLATION_MODAL.style.display = 'none';
             QUIZ_OFF_MODAL.style.display = 'none'; 
@@ -148,6 +157,14 @@
             else if (viewName === 'quiz') renderQuiz();
             else if (viewName === 'admin') renderAdminLogin();
             else if (viewName === 'leaderboard') renderLeaderboard(); 
+        }
+
+        function showQuizOffModal() {
+            const msg = document.getElementById('quizOffMessage');
+            if (msg) {
+                msg.innerHTML = "The administrator has <strong class='text-red-500'>NOT started</strong> the quiz yet.<br><br>Please wait for further instructions.";
+            }
+            QUIZ_OFF_MODAL.style.display = 'flex';
         }
 
         function showTempMessage(msg, isError = false) {
@@ -367,12 +384,23 @@
 
             document.getElementById('signInForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                if (!isQuizActive) { showQuizOffModal(); return; }
+                
+                if (!isQuizActive) { 
+                    showQuizOffModal(); 
+                    return; 
+                }
+
                 studentInfo = {
                     name: document.getElementById('studentName').value.trim(),
                     email: document.getElementById('collegeEmail').value.trim(),
                     admissionNo: document.getElementById('admissionNo').value.trim()
                 };
+
+                // --- SHUFFLE LOGIC ADDED HERE ---
+                shuffleArray(quizQuestions);
+                // Reset responses to match the new (shuffled) order
+                studentResponses = Array(quizQuestions.length).fill(null);
+
                 requestFullScreen();
                 enableProctoring();
                 setView('quiz');
@@ -565,7 +593,6 @@
 
                 // Apply Search
                 if (searchTerm) {
-                    // Filter by Name OR Admission No (Using ilike for case-insensitive match)
                     query = query.or(`student_name.ilike.%${searchTerm}%,admission_no.ilike.%${searchTerm}%`);
                 }
 
@@ -586,7 +613,6 @@
                     default: query = query.order('score', { ascending: false });
                 }
 
-                // Always secondary sort by time
                 if (!sortValue.includes('date')) {
                     query = query.order('submission_time', { ascending: false });
                 }
@@ -630,22 +656,18 @@
             document.getElementById('quizToggle').onclick = () => {
                 isQuizActive = !isQuizActive;
                 localStorage.setItem('isQuizActive', isQuizActive);
-                renderLeaderboard(); // Re-render to update button state
+                renderLeaderboard(); 
             };
             document.getElementById('refreshBtn').onclick = fetchAndRender;
-            
-            // Filter Change Events
             document.getElementById('sortSelect').addEventListener('change', fetchAndRender);
             document.getElementById('dateFilter').addEventListener('change', fetchAndRender);
             
-            // Debounced Search (Wait 500ms after typing stops)
             let searchTimeout;
             document.getElementById('searchInput').addEventListener('input', () => {
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(fetchAndRender, 500);
             });
 
-            // Initial Load
             fetchAndRender();
         }
 
@@ -653,6 +675,11 @@
         document.addEventListener('DOMContentLoaded', () => {
             setView('signin');
             ADMIN_BUTTON.onclick = () => setView('admin');
+            
+            // Initialize the quiz off modal close button
+            QUIZ_OFF_CONFIRM_BTN.onclick = () => {
+                QUIZ_OFF_MODAL.style.display = 'none';
+            };
             
             const fsHandler = () => {
                 if (!document.fullscreenElement && !document.webkitFullscreenElement && currentQuestionIndex < quizQuestions.length && VIOLATION_MODAL.style.display !== 'flex') {
