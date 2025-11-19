@@ -6,88 +6,76 @@
     <title>Proctored Business & Finance Quiz</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Custom styles to ensure full-screen on modern browsers */
-        #app {
-            min-height: 100vh;
+        #app { min-height: 100vh; }
+        #adminButton { position: fixed; top: 10px; right: 10px; z-index: 100; }
+        #progressBarContainer { position: relative; height: 8px; background-color: #e5e7eb; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+        #progressBar { height: 100%; width: 100%; background-color: #ef4444; transition: width 1s linear; }
+        #countdownTimer { font-size: 1.25rem; font-weight: 700; color: #ef4444; text-align: right; margin-bottom: 10px; }
+        
+        /* Loading Overlay */
+        #loadingOverlay {
+            position: fixed; inset: 0; background: rgba(255,255,255,0.9); 
+            z-index: 9999; display: none; flex-direction: column; 
+            align-items: center; justify-content: center;
         }
-        /* Style for the leader board button, always visible */
-        #adminButton {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 100;
+        .spinner {
+            border: 4px solid #f3f3f3; border-top: 4px solid #3498db; 
+            border-radius: 50%; width: 50px; height: 50px; 
+            animation: spin 1s linear infinite; margin-bottom: 15px;
         }
-        /* Custom progress bar styles */
-        #progressBarContainer {
-            position: relative;
-            height: 8px;
-            background-color: #e5e7eb;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-        #progressBar {
-            height: 100%;
-            width: 100%; /* Start full */
-            background-color: #ef4444; /* Red color for timer */
-            transition: none; /* Removed transition for smooth timer animation */
-        }
-        #countdownTimer {
-            font-size: 1.25rem; /* text-xl */
-            font-weight: 700; /* font-bold */
-            color: #ef4444; /* Red color */
-            text-align: right;
-            margin-bottom: 10px;
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gray-50">
+
+    <!-- Loading Overlay for Data Submission -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <h2 class="text-xl font-bold text-gray-800">Submitting Results...</h2>
+        <p class="text-gray-500">Please do not close this window.</p>
+    </div>
 
     <button id="adminButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-lg transition duration-150 ease-in-out text-sm">
         <i class="fas fa-lock mr-2"></i>Admin Panel
     </button>
 
-    <div id="app" class="flex items-center justify-center p-4">
-    </div>
+    <div id="app" class="flex items-center justify-center p-4"></div>
 
+    <!-- Violation Modal -->
     <div id="violationModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center">
             <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
             <h3 class="text-xl font-bold text-gray-900 mb-3">Exam Violation Detected!</h3>
             <p id="violationMessage" class="text-gray-600 mb-6 text-sm"></p>
-            <button id="modalConfirmBtn" class="w-full py-2 px-4 rounded-lg text-white font-semibold bg-yellow-600 hover:bg-yellow-700 transition">
-                I Understand
-            </button>
+            <button id="modalConfirmBtn" class="w-full py-2 px-4 rounded-lg text-white font-semibold bg-yellow-600 hover:bg-yellow-700 transition">I Understand</button>
         </div>
     </div>
     
+    <!-- Quiz Off Modal -->
     <div id="quizOffModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center">
             <i class="fas fa-pause-circle text-4xl text-blue-500 mb-4"></i>
             <h3 class="text-xl font-bold text-gray-900 mb-3">Quiz is Currently Unavailable</h3>
-            <p id="quizOffMessage" class="text-gray-600 mb-6 text-sm">The examination is currently paused or closed by the administrator. Please try again later.</p>
-            <button id="quizOffConfirmBtn" class="w-full py-2 px-4 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 transition">
-                Close
-            </button>
+            <p id="quizOffMessage" class="text-gray-600 mb-6 text-sm">The examination is currently paused by the administrator.</p>
+            <button id="quizOffConfirmBtn" class="w-full py-2 px-4 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 transition">Close</button>
         </div>
     </div>
     
     <script>
         // --- SUPABASE CONFIGURATION ---
-        // !!! IMPORTANT: REPLACE THESE PLACEHOLDERS WITH YOUR ACTUAL SUPABASE PROJECT DETAILS !!!
+        // Ensure these match your Project Settings > API
         const SUPABASE_URL = 'https://tdxausibwaagbhnbgkgz.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkeGF1c2lid2FhZ2JobmJna2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNDgyMDYsImV4cCI6MjA3ODYyNDIwNn0.ApeJFTg-pQaV2gigOUTGpKnMY_AFnT1v5DPpYCCmOKY';
         const SUPABASE_TABLE_NAME = 'quiz_submissions'; 
 
-        // NOTE: Use a static, valid UUID for the quiz ID. You can change this if you have multiple quizzes.
         const STATIC_QUIZ_UUID = '5f4b3d2c-1a0e-9f8d-7c6b-5a4e3d2c1b0a';
 
-        // Initialize Supabase client
+        // Initialize Supabase
         const { createClient } = supabase;
         const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        // ------------------------------
 
         // --- QUIZ DATA ---
         const quizQuestions = [
@@ -113,30 +101,21 @@
             { question: "Which Indian bank ranked highest in “World’s Best Banks 2024” by Forbes?", options: ["HDFC Bank", "SBI", "Axis Bank", "ICICI"], answer: "HDFC Bank" }
         ];
 
-        // --- STATE MANAGEMENT ---
+        // --- STATE ---
         let studentInfo = {};
         let currentQuestionIndex = 0;
         let studentResponses = Array(quizQuestions.length).fill(null);
         let timerInterval;
-        // Time per question is 10 seconds
         const TIME_PER_QUESTION = 10; 
         let timeLeft = TIME_PER_QUESTION;
-        
-        // Check localStorage for quiz status, default to true
         let isQuizActive = localStorage.getItem('isQuizActive') === 'false' ? false : true; 
         
-        // Updated violation structure for granular tracking
-        let proctoringViolations = {
-            total: 0,
-            windowSwitch: 0,
-            copyPaste: 0
-        };
-        const MAX_VIOLATIONS = 3; // Max total violations before ending exam
-        
-        // Debounce mechanism to prevent multiple window-switch counts
+        // Violations
+        let proctoringViolations = { total: 0, windowSwitch: 0, copyPaste: 0 };
+        const MAX_VIOLATIONS = 3;
         let violationCooldown = false; 
-        const COOLDOWN_DURATION = 2000; // 2 seconds cooldown
 
+        // DOM Elements
         const APP_CONTAINER = document.getElementById('app');
         const ADMIN_BUTTON = document.getElementById('adminButton');
         const VIOLATION_MODAL = document.getElementById('violationModal');
@@ -144,14 +123,15 @@
         const VIOLATION_MESSAGE = document.getElementById('violationMessage');
         const QUIZ_OFF_MODAL = document.getElementById('quizOffModal');
         const QUIZ_OFF_CONFIRM_BTN = document.getElementById('quizOffConfirmBtn');
+        const LOADING_OVERLAY = document.getElementById('loadingOverlay');
 
-        // --- HELPER FUNCTIONS ---
+        // --- UTILITIES ---
 
-        /**
-         * Generates a simple, unique UUID (v4-like).
-         * This is necessary to satisfy the NOT NULL uuid fields in the database schema.
-         */
         function generateUUID() {
+            // Use crypto API if available for robust UUIDs, else fallback
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
                 const r = Math.random() * 16 | 0;
                 const v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -159,179 +139,124 @@
             });
         }
 
-        // Manages view switching
         function setView(viewName) {
-            // Hide all custom modals when switching views
             VIOLATION_MODAL.style.display = 'none';
             QUIZ_OFF_MODAL.style.display = 'none'; 
-            
-            // Ensure the sign-in form is visible before rendering it
+            LOADING_OVERLAY.style.display = 'none';
+
             const signInForm = document.getElementById('signInForm');
             if(signInForm) signInForm.style.display = 'block'; 
 
             ADMIN_BUTTON.style.display = (viewName === 'quiz') ? 'none' : 'block';
             APP_CONTAINER.innerHTML = '';
+
             if (viewName === 'signin') renderSignIn();
             else if (viewName === 'quiz') renderQuiz();
-            else if (viewName === 'results') renderResults();
+            // Results is handled by calculateAndShowResults directly
             else if (viewName === 'admin') renderAdminLogin();
             else if (viewName === 'leaderboard') renderLeaderboard();
         }
 
-        // Utility to show a temporary message (since we can't use alert)
-        function showTempMessage(msg) {
+        function showTempMessage(msg, isError = false) {
             let tempDiv = document.getElementById('tempMessage');
             if (!tempDiv) {
                 tempDiv = document.createElement('div');
                 tempDiv.id = 'tempMessage';
-                tempDiv.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow-xl z-[60] opacity-0 transition-opacity duration-300';
+                tempDiv.className = `fixed top-20 left-1/2 transform -translate-x-1/2 text-white px-6 py-3 rounded-lg shadow-xl z-[60] transition-opacity duration-300 font-medium`;
                 document.body.appendChild(tempDiv);
             }
+            // Color based on type
+            tempDiv.className = `fixed top-20 left-1/2 transform -translate-x-1/2 text-white px-6 py-3 rounded-lg shadow-xl z-[60] transition-opacity duration-300 font-medium ${isError ? 'bg-red-600' : 'bg-green-600'}`;
+            
             tempDiv.textContent = msg;
             tempDiv.style.opacity = '1';
-            setTimeout(() => { tempDiv.style.opacity = '0'; }, 3000);
+            setTimeout(() => { tempDiv.style.opacity = '0'; }, 4000);
         }
 
-        // Retrieves leaderboard data from Local Storage
         function getLeaderboard() {
             try {
                 const data = localStorage.getItem('quizLeaderboard');
                 return data ? JSON.parse(data) : [];
-            } catch (e) {
-                console.error("Error parsing leaderboard from localStorage:", e);
-                return [];
-            }
+            } catch (e) { return []; }
         }
 
-        // Saves current student's score to Local Storage (returns the result object for Supabase)
-        function saveResult(name, email, admissionNo, score, totalQuestions, violations) {
+        function saveResultLocally(name, email, admissionNo, score, totalQuestions, violations) {
             const leaderboard = getLeaderboard();
+            const percentageVal = ((score / totalQuestions) * 100).toFixed(2);
             const result = {
-                name: name,
-                email: email,
-                admissionNo: admissionNo,
-                score: score,
-                total: totalQuestions,
-                percentage: ((score / totalQuestions) * 100).toFixed(2),
+                name, email, admissionNo, score, total: totalQuestions,
+                percentage: percentageVal,
                 violations: violations.total, 
                 windowSwitchViolations: violations.windowSwitch,
                 copyPasteViolations: violations.copyPaste,
                 timestamp: new Date().toLocaleString()
             };
             leaderboard.push(result);
-            // Sort by score (descending) then by time (ascending) to break ties
             leaderboard.sort((a, b) => b.score - a.score || new Date(a.timestamp) - new Date(b.timestamp));
             localStorage.setItem('quizLeaderboard', JSON.stringify(leaderboard));
-            return result; // Return the result object for Supabase upload
+            return result; 
         }
 
-        // NEW ASYNC FUNCTION: Upload result to Supabase
+        // --- DATABASE UPLOAD LOGIC (FIXED) ---
         async function uploadResultToSupabase(resultData) {
-            
-            // Generate a unique ID for this submission (acting as the student_id for the submission)
             const submissionUUID = generateUUID(); 
 
-            // Structure data for the Supabase table (aligned with user's SQL schema)
             const dataToInsert = {
-                // Mandatory UUID fields (using generated UUIDs to ensure uniqueness and validity)
                 student_id: submissionUUID,
-                quiz_id: STATIC_QUIZ_UUID,       
-
-                // Data gathered from the quiz
+                quiz_id: STATIC_QUIZ_UUID,
                 score: resultData.score,
                 total_questions: resultData.total,
-                // Sending percentage as TEXT as per your SQL schema definition
                 percentage: resultData.percentage.toString(), 
                 total_violations: resultData.violations,
                 window_switch_violations: resultData.windowSwitchViolations,
                 copy_paste_violations: resultData.copyPasteViolations,
                 submission_time: new Date().toISOString(),
-                
-                // Student Info
                 student_name: resultData.name,
                 college_email: resultData.email,
                 admission_no: resultData.admissionNo,
             };
 
-            console.log("Attempting to insert:", dataToInsert);
+            console.log("Submitting to Supabase:", dataToInsert);
 
             try {
-                const { error } = await client
+                const { data, error } = await client
                     .from(SUPABASE_TABLE_NAME)
-                    .insert([dataToInsert]);
+                    .insert([dataToInsert])
+                    .select(); // select() helps return data to confirm insertion
 
                 if (error) {
-                    console.error('Error inserting data into Supabase:', error.message);
-                    // Provide detailed error message if possible
-                    showTempMessage(`Database error: Failed to save results. Check console. Details: ${error.message}`);
-                } else {
-                    console.log('Successfully saved results to Supabase.');
-                    showTempMessage('Quiz submitted and result saved to database.');
+                    console.error('SUPABASE ERROR:', error);
+                    throw error; // Throw to be caught by the caller
                 }
+                
+                console.log('Supabase Success:', data);
+                return { success: true };
+
             } catch (e) {
-                console.error('Supabase connection error:', e);
-                showTempMessage('Connection error: Could not reach database. Check URL/Key.');
+                console.error('Upload Exception:', e);
+                return { success: false, message: e.message || e.error_description || "Unknown error" };
             }
         }
 
-        // Toggle Quiz Status (Admin Feature)
-        function toggleQuizState() {
-            isQuizActive = !isQuizActive;
-            localStorage.setItem('isQuizActive', isQuizActive);
-            renderLeaderboard();
-        }
-        
-        // Show Quiz Off Modal
-        function showQuizOffModal() {
-            const signInForm = document.getElementById('signInForm');
-            if (signInForm) signInForm.style.display = 'none'; 
-            
-            QUIZ_OFF_MODAL.style.display = 'flex';
-            
-            // Set up button to dismiss modal and re-show the sign-in form
-            QUIZ_OFF_CONFIRM_BTN.onclick = () => {
-                QUIZ_OFF_MODAL.style.display = 'none';
-                if(signInForm) setView('signin'); // Reload signin view to refresh state
-            };
-        }
-
-
-        // --- PROCTORING LOGIC (Unchanged) ---
-
-        // Request Full Screen
+        // --- PROCTORING ---
         function requestFullScreen() {
             const element = document.documentElement;
-            if (element.requestFullscreen) {
-                element.requestFullscreen();
-            } else if (element.mozRequestFullScreen) {
-                element.mozRequestFullScreen();
-            } else if (element.webkitRequestFullscreen) {
-                element.webkitRequestFullscreen();
-            } else if (element.msRequestFullscreen) {
-                element.msRequestFullscreen();
-            }
+            if (element.requestFullscreen) element.requestFullscreen().catch(e => console.log("Fullscreen denied", e));
+            else if (element.mozRequestFullScreen) element.mozRequestFullScreen();
+            else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
+            else if (element.msRequestFullscreen) element.msRequestFullscreen();
         }
 
-        // Exit Full Screen
         function exitFullScreen() {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
+            if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen();
+            else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            else if (document.msExitFullscreen) document.msExitFullscreen();
         }
         
-        // Show custom modal instead of alert
         function showViolationModal(isTerminating) {
             if (isTerminating) {
-                VIOLATION_MESSAGE.innerHTML = `
-                    <p class="text-red-700 font-semibold">FINAL WARNING: ${MAX_VIOLATIONS} violations detected.</p> 
-                    <p>The exam has been terminated. Your score will be recorded with violations.</p>
-                `;
+                VIOLATION_MESSAGE.innerHTML = `<p class="text-red-700 font-semibold">FINAL WARNING: ${MAX_VIOLATIONS} violations detected.</p><p>Exam terminated.</p>`;
                 MODAL_CONFIRM_BTN.textContent = 'End Exam';
                 MODAL_CONFIRM_BTN.onclick = () => {
                     VIOLATION_MODAL.style.display = 'none';
@@ -341,11 +266,7 @@
                     calculateAndShowResults(true); 
                 };
             } else {
-                VIOLATION_MESSAGE.innerHTML = `
-                    Do not violate the rules. 
-                    <span class="font-bold">Total violations: ${proctoringViolations.total}/${MAX_VIOLATIONS}.</span> 
-                    The exam will terminate upon the ${MAX_VIOLATIONS}rd violation.
-                `;
+                VIOLATION_MESSAGE.innerHTML = `Do not switch tabs. <span class="font-bold">Total: ${proctoringViolations.total}/${MAX_VIOLATIONS}.</span>`;
                 MODAL_CONFIRM_BTN.textContent = 'Return to Quiz';
                 MODAL_CONFIRM_BTN.onclick = () => {
                     VIOLATION_MODAL.style.display = 'none';
@@ -355,64 +276,36 @@
             VIOLATION_MODAL.style.display = 'flex';
         }
 
-        // Proctoring violation handler
         function handleProctoringViolation(type) {
-            if (currentQuestionIndex >= quizQuestions.length) {
-                return; 
-            }
+            if (currentQuestionIndex >= quizQuestions.length) return; 
             
             if (type === 'windowSwitch') {
                 if (violationCooldown) return; 
-                
                 proctoringViolations.windowSwitch++;
-                
                 violationCooldown = true;
-                setTimeout(() => { violationCooldown = false; }, COOLDOWN_DURATION);
-
+                setTimeout(() => { violationCooldown = false; }, 2000);
                 requestFullScreen(); 
             } 
-            else if (type === 'copyPaste') {
-                proctoringViolations.copyPaste++;
-            } else {
-                return; 
-            }
+            else if (type === 'copyPaste') proctoringViolations.copyPaste++;
+            else return; 
             
             proctoringViolations.total++;
 
-            const violationDisplay = document.getElementById('violationCountDisplay');
-            if (violationDisplay) {
-                violationDisplay.innerHTML = `⚠️ Violations: ${proctoringViolations.total} / ${MAX_VIOLATIONS} (Tab: ${proctoringViolations.windowSwitch}, Copy/Paste: ${proctoringViolations.copyPaste})`;
-            }
+            const vDisplay = document.getElementById('violationCountDisplay');
+            if (vDisplay) vDisplay.innerHTML = `⚠️ Violations: ${proctoringViolations.total} / ${MAX_VIOLATIONS}`;
 
-            if (proctoringViolations.total >= MAX_VIOLATIONS) {
-                showViolationModal(true); 
-            } else if (type === 'windowSwitch') {
-                showViolationModal(false); 
-            }
+            if (proctoringViolations.total >= MAX_VIOLATIONS) showViolationModal(true); 
+            else if (type === 'windowSwitch') showViolationModal(false); 
         }
         
-        // Named functions for event listeners to allow proper removal
-
-        const visibilityChangeHandler = () => {
-            if (document.hidden) {
-                handleProctoringViolation('windowSwitch');
-            }
-        };
-
-        const blurHandler = () => {
-            handleProctoringViolation('windowSwitch');
-        };
-
+        const visibilityChangeHandler = () => { if (document.hidden) handleProctoringViolation('windowSwitch'); };
+        const blurHandler = () => { handleProctoringViolation('windowSwitch'); };
         const copyCutPasteHandler = (e) => {
             e.preventDefault();
-            
-            const message = e.type === 'paste' ? 'Pasting is blocked during the exam.' : 'Copying/cutting content is blocked during the exam.';
-            showTempMessage(message); 
-            
+            showTempMessage('Content protected.', true); 
             handleProctoringViolation('copyPaste');
         };
 
-        // Attach event listeners for proctoring
         function enableProctoring() {
             document.addEventListener('visibilitychange', visibilityChangeHandler);
             window.addEventListener('blur', blurHandler);
@@ -421,7 +314,6 @@
             document.addEventListener('paste', copyCutPasteHandler);
         }
 
-        // Detach event listeners
         function disableProctoring() {
             document.removeEventListener('visibilitychange', visibilityChangeHandler);
             window.removeEventListener('blur', blurHandler);
@@ -430,30 +322,21 @@
             document.removeEventListener('paste', copyCutPasteHandler);
         }
 
-        // --- QUIZ TIMER & NAVIGATION LOGIC (Unchanged) ---
-
+        // --- TIMER & LOGIC ---
         function updateTimerDisplay() {
             const progressBar = document.getElementById('progressBar');
             const countdownTimer = document.getElementById('countdownValue'); 
-            
-            if (progressBar) {
-                const percentage = (timeLeft / TIME_PER_QUESTION) * 100;
-                progressBar.style.width = percentage + '%';
-            }
-            if (countdownTimer) {
-                countdownTimer.textContent = timeLeft;
-            }
+            if (progressBar) progressBar.style.width = ((timeLeft / TIME_PER_QUESTION) * 100) + '%';
+            if (countdownTimer) countdownTimer.textContent = timeLeft;
         }
 
         function startTimer() {
             stopTimer();
             timeLeft = TIME_PER_QUESTION;
             updateTimerDisplay();
-
             timerInterval = setInterval(() => {
                 timeLeft--;
                 updateTimerDisplay();
-
                 if (timeLeft <= 0) {
                     stopTimer();
                     studentResponses[currentQuestionIndex] = null;
@@ -462,9 +345,7 @@
             }, 1000);
         }
 
-        function stopTimer() {
-            clearInterval(timerInterval);
-        }
+        function stopTimer() { clearInterval(timerInterval); }
 
         function moveToNextQuestion() {
             currentQuestionIndex++;
@@ -479,43 +360,24 @@
             }
         }
 
-        // --- QUIZ RENDERING ---
+        // --- RENDERING VIEWS ---
 
         function renderSignIn() {
             APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
             APP_CONTAINER.innerHTML = `
-                <div class="w-full max-w-md bg-white rounded-xl shadow-2xl p-8 transform transition duration-500 hover:shadow-3xl">
+                <div class="w-full max-w-md bg-white rounded-xl shadow-2xl p-8">
                     <h2 class="text-3xl font-extrabold text-center text-gray-900 mb-6">Quiz Sign-In</h2>
-                    <p class="text-center text-gray-600 mb-8">Enter your details to begin the proctored examination.</p>
                     <form id="signInForm" class="space-y-4">
-                        <div>
-                            <label for="studentName" class="block text-sm font-medium text-gray-700">Student Name</label>
-                            <input type="text" id="studentName" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label for="collegeEmail" class="block text-sm font-medium text-gray-700">College Email ID</label>
-                            <input type="email" id="collegeEmail" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label for="admissionNo" class="block text-sm font-medium text-gray-700">Admission No.</label>
-                            <input type="text" id="admissionNo" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out mt-6">
-                            Start Quiz (Activate Proctoring)
-                        </button>
+                        <div><label class="block text-sm font-medium text-gray-700">Name</label><input type="text" id="studentName" required class="mt-1 block w-full px-4 py-2 border rounded-lg"></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="collegeEmail" required class="mt-1 block w-full px-4 py-2 border rounded-lg"></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Admission No.</label><input type="text" id="admissionNo" required class="mt-1 block w-full px-4 py-2 border rounded-lg"></div>
+                        <button type="submit" class="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition mt-6">Start Quiz</button>
                     </form>
-                </div>
-            `;
+                </div>`;
 
             document.getElementById('signInForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                
-                // FEATURE CHECK: Block access if quiz is not active
-                if (!isQuizActive) {
-                    showQuizOffModal();
-                    return; 
-                }
-                
+                if (!isQuizActive) { showQuizOffModal(); return; }
                 studentInfo = {
                     name: document.getElementById('studentName').value.trim(),
                     email: document.getElementById('collegeEmail').value.trim(),
@@ -531,238 +393,162 @@
             APP_CONTAINER.className = "flex items-start justify-center min-h-screen p-4 bg-gray-100";
             APP_CONTAINER.innerHTML = `
                 <div class="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-8 mt-10">
-                    <h1 class="text-2xl font-bold text-gray-900 mb-4">Proctored Business & Finance Quiz</h1>
-                    <div id="progressBarContainer">
-                        <div id="progressBar"></div>
-                    </div>
-                    <div id="countdownTimer">Time Left: <span id="countdownValue">${TIME_PER_QUESTION}</span>s</div> 
+                    <div id="progressBarContainer"><div id="progressBar"></div></div>
+                    <div id="countdownTimer">Time: <span id="countdownValue">${TIME_PER_QUESTION}</span>s</div> 
                     <div id="quizContent"></div>
-                </div>
-            `;
+                </div>`;
             renderQuizQuestion();
             startTimer();
         }
 
         function renderQuizQuestion() {
-            const quizContent = document.getElementById('quizContent');
             const q = quizQuestions[currentQuestionIndex];
-            const qNum = currentQuestionIndex + 1;
-            const total = quizQuestions.length;
-
+            const quizContent = document.getElementById('quizContent');
             quizContent.innerHTML = `
-                <div class="mb-6">
-                    <div class="text-sm font-medium text-blue-600 mb-2">Question ${qNum} of ${total}</div>
-                    <h3 class="text-xl font-semibold text-gray-800">${q.question}</h3>
-                </div>
+                <div class="mb-6"><h3 class="text-xl font-semibold text-gray-800">${q.question}</h3></div>
                 <div class="space-y-4" id="optionsContainer">
-                    ${q.options.map((option, index) => `
-                        <label class="flex items-center p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-blue-50 transition duration-150">
-                            <input type="radio" name="answer" value="${option}" class="form-radio h-5 w-5 text-blue-600" ${studentResponses[currentQuestionIndex] === option ? 'checked' : ''}>
-                            <span class="ml-4 text-gray-700">${option}</span>
-                        </label>
-                    `).join('')}
+                    ${q.options.map(opt => `
+                        <label class="flex items-center p-4 border rounded-xl cursor-pointer hover:bg-blue-50">
+                            <input type="radio" name="answer" value="${opt}" class="h-5 w-5 text-blue-600" ${studentResponses[currentQuestionIndex] === opt ? 'checked' : ''}>
+                            <span class="ml-4 text-gray-700">${opt}</span>
+                        </label>`).join('')}
                 </div>
                 <div class="flex justify-end mt-8">
-                    <button id="nextButton" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150 ease-in-out">
-                        ${qNum === total ? 'Finish Quiz' : 'Next Question'} <i class="fas ${qNum === total ? 'fa-check' : 'fa-arrow-right'} ml-2"></i>
+                    <button id="nextButton" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        ${currentQuestionIndex + 1 === quizQuestions.length ? 'Finish' : 'Next'}
                     </button>
                 </div>
-                ${proctoringViolations.total > 0 ? `<p id="violationCountDisplay" class="mt-4 text-sm text-red-600 font-medium text-right">⚠️ Violations: ${proctoringViolations.total} / ${MAX_VIOLATIONS} (Tab: ${proctoringViolations.windowSwitch}, Copy/Paste: ${proctoringViolations.copyPaste})</p>` : `<p id="violationCountDisplay" class="mt-4 text-sm text-gray-500 font-medium text-right">No violations recorded.</p>`}
+                <p id="violationCountDisplay" class="mt-4 text-sm text-right text-gray-500"></p>
             `;
 
-            document.getElementById('nextButton').addEventListener('click', () => {
+            document.getElementById('nextButton').onclick = () => {
                 const selected = document.querySelector('input[name="answer"]:checked');
-                // Record the response 
                 studentResponses[currentQuestionIndex] = selected ? selected.value : null;
                 stopTimer();
                 moveToNextQuestion();
-            });
-
-            // Listen for option selection to record early answer
-            document.getElementById('optionsContainer').addEventListener('change', (e) => {
-                if (e.target.name === 'answer') {
-                    studentResponses[currentQuestionIndex] = e.target.value;
-                }
-            });
+            };
+            
+            document.getElementById('optionsContainer').onchange = (e) => {
+                if (e.target.name === 'answer') studentResponses[currentQuestionIndex] = e.target.value;
+            };
         }
 
-        function calculateAndShowResults(wasTerminated) {
-            let score = 0;
-            quizQuestions.forEach((q, index) => {
-                if (studentResponses[index] === q.answer) {
-                    score++;
-                }
-            });
+        // --- RESULTS & UPLOAD HANDLING (KEY CHANGES HERE) ---
+        async function calculateAndShowResults(wasTerminated) {
+            // Show loading spinner immediately
+            LOADING_OVERLAY.style.display = 'flex';
 
-            // 1. Save results locally (for Admin Leaderboard view)
-            const result = saveResult(
-                studentInfo.name, 
-                studentInfo.email, 
-                studentInfo.admissionNo, 
-                score, 
-                quizQuestions.length, 
-                proctoringViolations
+            let score = 0;
+            quizQuestions.forEach((q, idx) => { if (studentResponses[idx] === q.answer) score++; });
+
+            // 1. Save Locally
+            const result = saveResultLocally(
+                studentInfo.name, studentInfo.email, studentInfo.admissionNo, 
+                score, quizQuestions.length, proctoringViolations
             );
 
-            // 2. Upload results to Supabase (asynchronously)
-            uploadResultToSupabase(result);
-            
+            // 2. Upload to Supabase (Await this!)
+            const uploadStatus = await uploadResultToSupabase(result);
+
+            // Hide spinner
+            LOADING_OVERLAY.style.display = 'none';
+
+            // 3. Render Final Screen
+            renderFinalScreen(score, wasTerminated, uploadStatus);
+        }
+
+        function renderFinalScreen(score, wasTerminated, uploadStatus) {
+            const statusClass = uploadStatus.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+            const statusIcon = uploadStatus.success ? 'fa-check-circle' : 'fa-exclamation-circle';
+            const statusMsg = uploadStatus.success ? 'Saved to Database' : 'Database Upload Failed';
+            const errorDetail = uploadStatus.success ? '' : `<p class="text-xs mt-1 text-red-600 break-all">${uploadStatus.message}</p>`;
+
             APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
             APP_CONTAINER.innerHTML = `
-                <div class="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-10 text-center transform transition duration-500">
+                <div class="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-10 text-center">
                     <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
                         <i class="fas fa-check-circle text-3xl text-green-600"></i>
                     </div>
-                    <h2 class="text-3xl font-extrabold text-gray-900 mb-3">${wasTerminated ? 'Exam Terminated & Submitted' : 'Quiz Submitted Successfully!'}</h2>
-                    <p class="text-gray-600 mb-8">${wasTerminated ? `Due to ${proctoringViolations.total} violations, the exam ended forcefully.` : 'Your responses have been recorded.'}</p>
+                    <h2 class="text-3xl font-extrabold text-gray-900 mb-3">${wasTerminated ? 'Terminated' : 'Submitted'}</h2>
                     
-                    <div class="bg-blue-50 p-6 rounded-xl mb-8">
-                        <h3 class="text-xl font-bold text-blue-800 mb-3">Your Result</h3>
-                        <div class="flex justify-between items-center text-lg text-gray-800 border-b pb-2 mb-2">
-                            <span>Score:</span>
-                            <span class="font-bold text-green-700">${score} / ${quizQuestions.length}</span>
-                        </div>
-                        <div class="flex justify-between items-center text-lg text-gray-800">
-                            <span>Proctoring Violations (Total):</span>
-                            <span class="font-bold text-red-700">${proctoringViolations.total}</span>
-                        </div>
-                        <div class="flex justify-between items-center text-md text-gray-700 mt-2 pt-2 border-t border-gray-200">
-                            <span>- Tab/Window Switch:</span>
-                            <span class="font-semibold text-red-600">${proctoringViolations.windowSwitch}</span>
-                        </div>
-                        <div class="flex justify-between items-center text-md text-gray-700">
-                            <span>- Copy/Paste Attempt:</span>
-                            <span class="font-semibold text-red-600">${proctoringViolations.copyPaste}</span>
-                        </div>
+                    <!-- Database Status Badge -->
+                    <div class="mb-6 p-3 rounded-lg ${statusClass} inline-block">
+                        <i class="fas ${statusIcon} mr-2"></i> <span class="font-bold">${statusMsg}</span>
+                        ${errorDetail}
                     </div>
 
-                    <button onclick="setView('signin')" class="w-full py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
-                        Return to Sign-In
-                    </button>
+                    <div class="bg-blue-50 p-6 rounded-xl mb-8 text-left">
+                        <div class="flex justify-between mb-2"><span>Score:</span><span class="font-bold">${score} / ${quizQuestions.length}</span></div>
+                        <div class="flex justify-between"><span>Violations:</span><span class="font-bold text-red-600">${proctoringViolations.total}</span></div>
+                    </div>
+
+                    <button onclick="setView('signin')" class="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Return to Sign-In</button>
                 </div>
             `;
         }
 
-        // --- ADMIN / LEADERBOARD (Includes Toggle Button) ---
-
+        // --- ADMIN ---
         function renderAdminLogin() {
-            APP_CONTAINER.className = "flex items-center justify-center min-h-screen p-4 bg-gray-50";
             APP_CONTAINER.innerHTML = `
                 <div class="w-full max-w-sm bg-white rounded-xl shadow-xl p-8">
-                    <h2 class="text-2xl font-bold text-center text-gray-900 mb-6"><i class="fas fa-user-shield mr-2 text-red-600"></i>Admin Login</h2>
-                    <p class="text-center text-gray-500 text-sm mb-4"></p>
+                    <h2 class="text-2xl font-bold text-center mb-6">Admin Login</h2>
                     <form id="adminLoginForm" class="space-y-4">
-                        <div>
-                            <label for="adminId" class="block text-sm font-medium text-gray-700">Admin ID</label>
-                            <input type="text" id="adminId" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
-                        </div>
-                        <div>
-                            <label for="adminPassword" class="block text-sm font-medium text-gray-700">Password</label>
-                            <input type="password" id="adminPassword" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
-                        </div>
-                        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out mt-6">
-                            Login
-                        </button>
-                        <button type="button" onclick="setView('signin')" class="w-full mt-2 py-2 px-4 rounded-lg text-sm font-medium text-gray-600 border border-gray-300 hover:bg-gray-100 transition duration-150 ease-in-out">
-                            Back to Home
-                        </button>
+                        <input type="text" id="adminId" placeholder="Admin ID" class="w-full px-4 py-2 border rounded-lg">
+                        <input type="password" id="adminPassword" placeholder="Password" class="w-full px-4 py-2 border rounded-lg">
+                        <button type="submit" class="w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Login</button>
+                        <button type="button" onclick="setView('signin')" class="w-full py-2 text-gray-600 border rounded-lg hover:bg-gray-50">Cancel</button>
                     </form>
-                </div>
-            `;
-
-            document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
+                </div>`;
+            
+            document.getElementById('adminLoginForm').onsubmit = (e) => {
                 e.preventDefault();
-                const id = document.getElementById('adminId').value;
-                const password = document.getElementById('adminPassword').value;
-
-                if (id === 'admin' && password === 'admin123') { 
-                    setView('leaderboard');
-                } else {
-                    const loginMessage = document.createElement('p');
-                    loginMessage.className = 'text-sm text-red-500 mt-2 text-center';
-                    loginMessage.textContent = 'Invalid Admin ID or Password.';
-                    document.getElementById('adminLoginForm').appendChild(loginMessage);
-                    setTimeout(() => loginMessage.remove(), 3000);
-                }
-            });
+                if (document.getElementById('adminId').value === 'admin' && document.getElementById('adminPassword').value === 'admin123') setView('leaderboard');
+                else showTempMessage('Invalid Credentials', true);
+            };
         }
 
         function renderLeaderboard() {
             const leaderboard = getLeaderboard();
-            APP_CONTAINER.className = "flex items-start justify-center min-h-screen p-4 bg-gray-100";
-            
-            const tableRows = leaderboard.map((entry, index) => `
-                <tr class="hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.name}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.admissionNo}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-700">${entry.score}/${entry.total}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${entry.percentage >= 80 ? 'text-green-600' : entry.percentage >= 50 ? 'text-yellow-600' : 'text-red-600'}">${entry.percentage}%</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-500">${entry.violations} (W:${entry.windowSwitchViolations || 0}, C:${entry.copyPasteViolations || 0})</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.timestamp}</td>
-                </tr>
-            `).join('');
-            
-            const tableContent = tableRows.length > 0 ? tableRows : `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500 font-medium bg-white">No results recorded yet.</td></tr>`;
+            const rows = leaderboard.map((entry, i) => `
+                <tr class="${i%2?'bg-gray-50':'bg-white'} hover:bg-gray-100">
+                    <td class="px-6 py-4">${i+1}</td>
+                    <td class="px-6 py-4 text-gray-900 font-medium">${entry.name}</td>
+                    <td class="px-6 py-4">${entry.score}</td>
+                    <td class="px-6 py-4 ${entry.violations>0?'text-red-600 font-bold':'text-gray-500'}">${entry.violations}</td>
+                    <td class="px-6 py-4 text-xs text-gray-400">${entry.timestamp}</td>
+                </tr>`).join('');
 
+            APP_CONTAINER.className = "flex items-start justify-center min-h-screen p-4 bg-gray-100";
             APP_CONTAINER.innerHTML = `
                 <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl p-8 mt-10">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-3xl font-bold text-gray-900"><i class="fas fa-trophy mr-2 text-yellow-500"></i>Real-Time Leaderboard</h2>
-                        <div class="flex items-center space-x-4">
-                            <button id="quizToggleButton" class="px-4 py-2 rounded-lg text-sm font-medium text-white ${isQuizActive ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} transition duration-150">
-                                <i class="fas ${isQuizActive ? 'fa-toggle-on' : 'fa-toggle-off'} mr-2"></i>Quiz Status: ${isQuizActive ? 'ON' : 'OFF'}
-                            </button>
-                            <button onclick="setView('signin')" class="px-4 py-2 rounded-lg text-sm font-medium text-blue-600 border border-blue-600 hover:bg-blue-50 transition duration-150">
-                                Return Home
-                            </button>
+                        <h2 class="text-2xl font-bold">Leaderboard (Local)</h2>
+                        <div>
+                            <button id="quizToggle" class="px-4 py-2 text-white rounded-lg mr-2 ${isQuizActive ? 'bg-green-600' : 'bg-red-600'}">Quiz: ${isQuizActive?'ON':'OFF'}</button>
+                            <button onclick="setView('signin')" class="px-4 py-2 border rounded-lg text-blue-600 border-blue-600">Home</button>
                         </div>
                     </div>
-                    
-                    <div class="overflow-x-auto shadow border-b border-gray-200 sm:rounded-lg">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admission No.</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Violations (W/C)</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                ${tableContent}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-            document.getElementById('quizToggleButton').addEventListener('click', toggleQuizState);
+                    <div class="overflow-x-auto rounded-lg border"><table class="min-w-full divide-y divide-gray-200"><tbody class="divide-y divide-gray-200">${rows || '<tr><td colspan="5" class="p-6 text-center">No Data</td></tr>'}</tbody></table></div>
+                </div>`;
+                
+            document.getElementById('quizToggle').onclick = () => {
+                isQuizActive = !isQuizActive;
+                localStorage.setItem('isQuizActive', isQuizActive);
+                renderLeaderboard();
+            };
         }
 
-
-        // --- INITIALIZATION (Unchanged) ---
+        // --- INIT ---
         document.addEventListener('DOMContentLoaded', () => {
             setView('signin');
+            ADMIN_BUTTON.onclick = () => setView('admin');
             
-            // Handle Admin Button Click
-            ADMIN_BUTTON.addEventListener('click', () => {
-                setView('admin'); // Always go to admin login screen
-            });
-
-            // Full-screen change handler function 
-            const fullScreenChangeHandler = () => {
-                if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && currentQuestionIndex < quizQuestions.length && VIOLATION_MODAL.style.display !== 'flex') {
+            const fsHandler = () => {
+                if (!document.fullscreenElement && !document.webkitFullscreenElement && currentQuestionIndex < quizQuestions.length && VIOLATION_MODAL.style.display !== 'flex') {
                     handleProctoringViolation('windowSwitch'); 
                 }
             };
-
-            // Attach full-screen handlers
-            document.addEventListener('fullscreenchange', fullScreenChangeHandler);
-            document.addEventListener('webkitfullscreenchange', fullScreenChangeHandler);
-            document.addEventListener('mozfullscreenchange', fullScreenChangeHandler);
+            ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange'].forEach(e => document.addEventListener(e, fsHandler));
         });
     </script>
 </body>
